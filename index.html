@@ -16,10 +16,23 @@
     input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
     button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #357abd; }
+
+    /* NEW: Alert Dashboard */
+    .alert-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .alert-item { padding: 10px; margin: 8px 0; border-radius: 6px; }
+    .alert-red { background: #ffcccc; border-left: 4px solid red; }
+    .alert-yellow { background: #fff3cd; border-left: 4px solid orange; }
   </style>
 </head>
 <body>
   <h1>Candidate Tracker</h1>
+
+  <!-- NEW: At-Risk Alert Dashboard -->
+  <div class="alert-box">
+    <h3>🚨 Candidates Needing Follow-Up</h3>
+    <div id="alertList"><p>No alerts right now ✅</p></div>
+  </div>
+
   <div class="form-box">
     <h3>Add Candidate</h3>
     <input id="name" placeholder="Full Name">
@@ -28,18 +41,41 @@
     <input id="email" placeholder="Email">
     <button onclick="addCandidate()">Add Candidate</button>
   </div>
+
   <table>
     <thead>
       <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Days Since Contact</th><th>Status</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
+
   <script>
     const candidates = [
       { name: "Alex Johnson", role: "Developer", email: "alex@email.com", lastContact: "2025-07-01" },
       { name: "Maria Garcia", role: "Designer", email: "maria@email.com", lastContact: "2025-07-10" },
       { name: "Sam Lee", role: "Manager", email: "sam@email.com", lastContact: "2025-06-25" }
     ];
+
+    function renderAlerts(candidateList) {
+      const today = new Date();
+      const atRisk = candidateList.filter(c => {
+        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
+        return days >= 7;
+      });
+
+      const alertList = document.getElementById("alertList");
+      if (atRisk.length === 0) {
+        alertList.innerHTML = "<p>No alerts right now ✅</p>";
+        return;
+      }
+
+      alertList.innerHTML = atRisk.map(c => {
+        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
+        const cls = days >= 10 ? "alert-red" : "alert-yellow";
+        const icon = days >= 10 ? "🔴" : "🟡";
+        return `<div class="alert-item ${cls}">${icon} <strong>${c.name}</strong> — ${c.role} — No update for ${days} days</div>`;
+      }).join("");
+    }
 
     function renderTable() {
       const today = new Date();
@@ -56,6 +92,7 @@
             <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td><td>${c.lastContact}</td><td>${days} days</td><td>${urgencyLabel}</td>
           </tr>`;
       });
+      renderAlerts(candidates);
     }
 
     function addCandidate() {
