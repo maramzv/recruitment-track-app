@@ -13,17 +13,49 @@
     .moderate { background: #fff3cd; }
     .good { background: #d4edda; }
     .form-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    .form-group { display: inline-block; margin: 5px; }
+    .form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
+    input, select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
     button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #357abd; }
     .alert-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
     .alert-item { padding: 10px; margin: 8px 0; border-radius: 6px; }
     .alert-red { background: #ffcccc; border-left: 4px solid red; }
     .alert-yellow { background: #fff3cd; border-left: 4px solid orange; }
+    .delete-btn { padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .delete-btn:hover { background: #c0392b; }
+    .edit-btn { padding: 5px 10px; background: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .edit-btn:hover { background: #d68910; }
+    .clear-btn { padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+    .clear-btn:hover { background: #c0392b; }
+    .update-btn { padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+    .update-btn:hover { background: #1e8449; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; padding: 30px; border-radius: 10px; max-width: 400px; text-align: center; }
+    .modal h3 { color: #e74c3c; margin-bottom: 10px; }
+    .modal p { color: #555; margin-bottom: 20px; }
+    .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+    .keep-btn { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .confirm-delete-btn { padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
   <h1>Candidate Tracker</h1>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3>⚠️ Delete Candidate?</h3>
+      <p>This candidate and <strong>all their information</strong> will be permanently removed. This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button class="keep-btn" onclick="closeModal()">Keep Profile</button>
+        <button class="confirm-delete-btn" onclick="confirmDelete()">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
 
   <div class="alert-box">
     <h3>🚨 Candidates Needing Follow-Up</h3>
@@ -31,37 +63,53 @@
   </div>
 
   <div class="form-box">
-    <h3>Add Candidate</h3>
-    <input id="name" placeholder="Full Name">
-    <input id="role" placeholder="Role">
-    <select id="stage">
-      <option value="">-- Hiring Stage --</option>
-      <option value="Applied">Applied</option>
-      <option value="Screening">Screening</option>
-      <option value="Interview 1">Interview 1</option>
-      <option value="Interview 2">Interview 2</option>
-      <option value="Offer">Offer</option>
-      <option value="Hired">Hired</option>
-      <option value="Rejected">Rejected</option>
-    </select>
-    <input id="lastContact" type="date">
-    <input id="email" placeholder="Email">
-    <button onclick="addCandidate()">Add Candidate</button>
+    <h3 id="formTitle">Add Candidate</h3>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input id="name" placeholder="e.g. Sarah Jones">
+    </div>
+    <div class="form-group">
+      <label>Role</label>
+      <input id="role" placeholder="e.g. Sales Manager">
+    </div>
+    <div class="form-group">
+      <label>Hiring Stage</label>
+      <select id="stage">
+        <option value="">-- Select Stage --</option>
+        <option value="Applied">Applied</option>
+        <option value="Screening">Screening</option>
+        <option value="Interview 1">Interview 1</option>
+        <option value="Interview 2">Interview 2</option>
+        <option value="Offer">Offer</option>
+        <option value="Hired">Hired</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Last Contact Date</label>
+      <input id="lastContact" type="date">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input id="email" placeholder="e.g. sarah@email.com">
+    </div>
+    <br>
+    <button onclick="submitForm()">Add Candidate</button>
+    <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
+    <button class="clear-btn" onclick="clearAll()">🗑️ Clear All</button>
   </div>
 
   <table>
     <thead>
-      <tr><th>Name</th><th>Role</th><th>Stage</th><th>Email</th><th>Last Contact</th><th>Status</th></tr>
+      <tr><th>Name</th><th>Role</th><th>Stage</th><th>Email</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
 
   <script>
-    const candidates = [
-      { name: "Alex Johnson", role: "Developer", stage: "Interview 1", email: "alex@email.com", lastContact: "2025-07-01" },
-      { name: "Maria Garcia", role: "Designer", stage: "Screening", email: "maria@email.com", lastContact: "2025-07-10" },
-      { name: "Sam Lee", role: "Manager", stage: "Offer", email: "sam@email.com", lastContact: "2025-06-25" }
-    ];
+    let candidates = [];
+    let deleteIndex = null;
+    let editIndex = null;
 
     function formatContactField(dateStr) {
       const date = new Date(dateStr);
@@ -83,10 +131,73 @@
       }).join("");
     }
 
+    function openModal(index) {
+      deleteIndex = index;
+      document.getElementById("deleteModal").classList.add("active");
+    }
+
+    function closeModal() {
+      deleteIndex = null;
+      document.getElementById("deleteModal").classList.remove("active");
+    }
+
+    function confirmDelete() {
+      if (deleteIndex !== null) {
+        candidates.splice(deleteIndex, 1);
+        renderTable();
+      }
+      closeModal();
+    }
+
+    function editCandidate(index) {
+      const c = candidates[index];
+      editIndex = index;
+      document.getElementById("name").value = c.name;
+      document.getElementById("role").value = c.role;
+      document.getElementById("stage").value = c.stage;
+      document.getElementById("lastContact").value = c.lastContact;
+      document.getElementById("email").value = c.email;
+      document.getElementById("formTitle").textContent = "✏️ Edit Candidate";
+      document.querySelector("button").style.display = "none";
+      document.getElementById("updateBtn").style.display = "inline-block";
+      window.scrollTo(0, 0);
+    }
+
+    function submitForm() {
+      const name = document.getElementById("name").value;
+      const role = document.getElementById("role").value;
+      const stage = document.getElementById("stage").value;
+      const email = document.getElementById("email").value;
+      const lastContact = document.getElementById("lastContact").value;
+      if (!name || !lastContact) { alert("Name and Last Contact Date are required!"); return; }
+
+      if (editIndex !== null) {
+        candidates[editIndex] = { name, role, stage, email, lastContact };
+        editIndex = null;
+        document.getElementById("formTitle").textContent = "Add Candidate";
+        document.querySelector("button").style.display = "inline-block";
+        document.getElementById("updateBtn").style.display = "none";
+      } else {
+        candidates.push({ name, role, stage, email, lastContact });
+      }
+
+      // Clear form
+      ["name","role","email","lastContact"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("stage").value = "";
+      renderTable();
+    }
+
+    function clearAll() {
+      if (confirm("Clear all candidates? This can't be undone.")) {
+        candidates = [];
+        renderTable();
+      }
+    }
+
     function renderTable() {
       candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
       document.getElementById("tableBody").innerHTML = "";
-      candidates.forEach(c => {
+      candidates.forEach((c, index) => {
         const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
         let urgencyClass = "good", urgencyLabel = "✅ Good";
         if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Urgent"; }
@@ -96,20 +207,13 @@
             <td>${c.name}</td><td>${c.role}</td><td>${c.stage || "—"}</td><td>${c.email}</td>
             <td>${formatContactField(c.lastContact)}</td>
             <td>${urgencyLabel}</td>
+            <td>
+              <button class="edit-btn" onclick="editCandidate(${index})">✏️ Edit</button>
+              <button class="delete-btn" onclick="openModal(${index})">🗑️ Delete</button>
+            </td>
           </tr>`;
       });
       renderAlerts(candidates);
-    }
-
-    function addCandidate() {
-      const name = document.getElementById("name").value;
-      const role = document.getElementById("role").value;
-      const stage = document.getElementById("stage").value;
-      const email = document.getElementById("email").value;
-      const lastContact = document.getElementById("lastContact").value;
-      if (!name || !lastContact) { alert("Name and Last Contact are required!"); return; }
-      candidates.push({ name, role, stage, email, lastContact });
-      renderTable();
     }
 
     renderTable();
