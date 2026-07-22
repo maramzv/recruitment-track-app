@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Candidate Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #4a90e2; color: white; }
+    .urgent { background: #ffe0e0; }
+    .moderate { background: #fff3cd; }
+    .good { background: #d4edda; }
+    .form-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #357abd; }
+  </style>
+</head>
+<body>
+  <h1>Candidate Tracker</h1>
+  <div class="form-box">
+    <h3>Add Candidate</h3>
+    <input id="name" placeholder="Full Name">
+    <input id="role" placeholder="Role">
+    <input id="lastContact" type="date">
+    <input id="email" placeholder="Email">
+    <button onclick="addCandidate()">Add Candidate</button>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Days Since Contact</th><th>Status</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <script>
+    const candidates = [
+      { name: "Alex Johnson", role: "Developer", email: "alex@email.com", lastContact: "2025-07-01" },
+      { name: "Maria Garcia", role: "Designer", email: "maria@email.com", lastContact: "2025-07-10" },
+      { name: "Sam Lee", role: "Manager", email: "sam@email.com", lastContact: "2025-06-25" }
+    ];
+
+    function renderTable() {
+      const today = new Date();
+      candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
+      document.getElementById("tableBody").innerHTML = "";
+      candidates.forEach(c => {
+        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
+        let urgencyClass = "good";
+        let urgencyLabel = "✅ Good";
+        if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Urgent"; }
+        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Follow Up"; }
+        document.getElementById("tableBody").innerHTML += `
+          <tr class="${urgencyClass}">
+            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td><td>${c.lastContact}</td><td>${days} days</td><td>${urgencyLabel}</td>
+          </tr>`;
+      });
+    }
+
+    function addCandidate() {
+      const name = document.getElementById("name").value;
+      const role = document.getElementById("role").value;
+      const email = document.getElementById("email").value;
+      const lastContact = document.getElementById("lastContact").value;
+      if (!name || !lastContact) { alert("Name and Last Contact are required!"); return; }
+      candidates.push({ name, role, email, lastContact });
+      renderTable();
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
