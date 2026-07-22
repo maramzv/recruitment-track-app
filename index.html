@@ -10,8 +10,10 @@
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
     th { background: #4a90e2; color: white; }
     .urgent { background: #ffe0e0; }
+    .moderate { background: #fff3cd; }
+    .good { background: #d4edda; }
     .form-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
     button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #357abd; }
   </style>
@@ -28,7 +30,7 @@
   </div>
   <table>
     <thead>
-      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Days Since Contact</th></tr>
+      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Days Since Contact</th><th>Status</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
@@ -45,9 +47,13 @@
       document.getElementById("tableBody").innerHTML = "";
       candidates.forEach(c => {
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
+        let urgencyClass = "good";
+        let urgencyLabel = "✅ Good";
+        if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Urgent"; }
+        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Follow Up"; }
         document.getElementById("tableBody").innerHTML += `
-          <tr class="${days > 10 ? 'urgent' : ''}">
-            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td><td>${c.lastContact}</td><td>${days} days</td>
+          <tr class="${urgencyClass}">
+            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td><td>${c.lastContact}</td><td>${days} days</td><td>${urgencyLabel}</td>
           </tr>`;
       });
     }
