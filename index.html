@@ -16,8 +16,6 @@
     input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
     button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #357abd; }
-
-    /* NEW: Alert Dashboard */
     .alert-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
     .alert-item { padding: 10px; margin: 8px 0; border-radius: 6px; }
     .alert-red { background: #ffcccc; border-left: 4px solid red; }
@@ -27,7 +25,6 @@
 <body>
   <h1>Candidate Tracker</h1>
 
-  <!-- NEW: At-Risk Alert Dashboard -->
   <div class="alert-box">
     <h3>🚨 Candidates Needing Follow-Up</h3>
     <div id="alertList"><p>No alerts right now ✅</p></div>
@@ -44,7 +41,7 @@
 
   <table>
     <thead>
-      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Days Since Contact</th><th>Status</th></tr>
+      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Status</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
@@ -56,6 +53,13 @@
       { name: "Sam Lee", role: "Manager", email: "sam@email.com", lastContact: "2025-06-25" }
     ];
 
+    function formatContactField(dateStr) {
+      const date = new Date(dateStr);
+      const days = Math.floor((new Date() - date) / 86400000);
+      const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      return `${days} days (${formatted})`;
+    }
+
     function renderAlerts(candidateList) {
       const today = new Date();
       const atRisk = candidateList.filter(c => {
@@ -64,10 +68,7 @@
       });
 
       const alertList = document.getElementById("alertList");
-      if (atRisk.length === 0) {
-        alertList.innerHTML = "<p>No alerts right now ✅</p>";
-        return;
-      }
+      if (atRisk.length === 0) { alertList.innerHTML = "<p>No alerts right now ✅</p>"; return; }
 
       alertList.innerHTML = atRisk.map(c => {
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
@@ -78,18 +79,18 @@
     }
 
     function renderTable() {
-      const today = new Date();
       candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
       document.getElementById("tableBody").innerHTML = "";
       candidates.forEach(c => {
-        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
-        let urgencyClass = "good";
-        let urgencyLabel = "✅ Good";
+        const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
+        let urgencyClass = "good", urgencyLabel = "✅ Good";
         if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Urgent"; }
         else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Follow Up"; }
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
-            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td><td>${c.lastContact}</td><td>${days} days</td><td>${urgencyLabel}</td>
+            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td>
+            <td>${formatContactField(c.lastContact)}</td>
+            <td>${urgencyLabel}</td>
           </tr>`;
       });
       renderAlerts(candidates);
