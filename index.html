@@ -13,7 +13,7 @@
     .moderate { background: #fff3cd; }
     .good { background: #d4edda; }
     .form-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+    input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
     button { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #357abd; }
     .alert-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -34,6 +34,16 @@
     <h3>Add Candidate</h3>
     <input id="name" placeholder="Full Name">
     <input id="role" placeholder="Role">
+    <select id="stage">
+      <option value="">-- Hiring Stage --</option>
+      <option value="Applied">Applied</option>
+      <option value="Screening">Screening</option>
+      <option value="Interview 1">Interview 1</option>
+      <option value="Interview 2">Interview 2</option>
+      <option value="Offer">Offer</option>
+      <option value="Hired">Hired</option>
+      <option value="Rejected">Rejected</option>
+    </select>
     <input id="lastContact" type="date">
     <input id="email" placeholder="Email">
     <button onclick="addCandidate()">Add Candidate</button>
@@ -41,16 +51,16 @@
 
   <table>
     <thead>
-      <tr><th>Name</th><th>Role</th><th>Email</th><th>Last Contact</th><th>Status</th></tr>
+      <tr><th>Name</th><th>Role</th><th>Stage</th><th>Email</th><th>Last Contact</th><th>Status</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
 
   <script>
     const candidates = [
-      { name: "Alex Johnson", role: "Developer", email: "alex@email.com", lastContact: "2025-07-01" },
-      { name: "Maria Garcia", role: "Designer", email: "maria@email.com", lastContact: "2025-07-10" },
-      { name: "Sam Lee", role: "Manager", email: "sam@email.com", lastContact: "2025-06-25" }
+      { name: "Alex Johnson", role: "Developer", stage: "Interview 1", email: "alex@email.com", lastContact: "2025-07-01" },
+      { name: "Maria Garcia", role: "Designer", stage: "Screening", email: "maria@email.com", lastContact: "2025-07-10" },
+      { name: "Sam Lee", role: "Manager", stage: "Offer", email: "sam@email.com", lastContact: "2025-06-25" }
     ];
 
     function formatContactField(dateStr) {
@@ -62,19 +72,14 @@
 
     function renderAlerts(candidateList) {
       const today = new Date();
-      const atRisk = candidateList.filter(c => {
-        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
-        return days >= 7;
-      });
-
+      const atRisk = candidateList.filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 7);
       const alertList = document.getElementById("alertList");
       if (atRisk.length === 0) { alertList.innerHTML = "<p>No alerts right now ✅</p>"; return; }
-
       alertList.innerHTML = atRisk.map(c => {
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
         const cls = days >= 10 ? "alert-red" : "alert-yellow";
         const icon = days >= 10 ? "🔴" : "🟡";
-        return `<div class="alert-item ${cls}">${icon} <strong>${c.name}</strong> — ${c.role} — No update for ${days} days</div>`;
+        return `<div class="alert-item ${cls}">${icon} <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
       }).join("");
     }
 
@@ -88,7 +93,7 @@
         else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Follow Up"; }
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
-            <td>${c.name}</td><td>${c.role}</td><td>${c.email}</td>
+            <td>${c.name}</td><td>${c.role}</td><td>${c.stage || "—"}</td><td>${c.email}</td>
             <td>${formatContactField(c.lastContact)}</td>
             <td>${urgencyLabel}</td>
           </tr>`;
@@ -99,10 +104,11 @@
     function addCandidate() {
       const name = document.getElementById("name").value;
       const role = document.getElementById("role").value;
+      const stage = document.getElementById("stage").value;
       const email = document.getElementById("email").value;
       const lastContact = document.getElementById("lastContact").value;
       if (!name || !lastContact) { alert("Name and Last Contact are required!"); return; }
-      candidates.push({ name, role, email, lastContact });
+      candidates.push({ name, role, stage, email, lastContact });
       renderTable();
     }
 
