@@ -60,6 +60,12 @@
   <div class="alert-box">
     <h3>🚨 Candidates Needing Follow-Up</h3>
     <div id="alertList"><p>No alerts right now ✅</p></div>
+    <p style="font-size: 13px; color: #666; margin-top: 15px;">
+      <strong>Status guide:</strong>
+      ✅ On Track (0–7 days since contact) &nbsp;|&nbsp;
+      ⚠️ Follow-up Needed (8–14 days) &nbsp;|&nbsp;
+      🔴 Overdue (15+ days)
+    </p>
   </div>
 
   <div class="form-box">
@@ -120,14 +126,14 @@
 
     function renderAlerts(candidateList) {
       const today = new Date();
-      const atRisk = candidateList.filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 7);
+      const atRisk = candidateList.filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 8);
       const alertList = document.getElementById("alertList");
       if (atRisk.length === 0) { alertList.innerHTML = "<p>No alerts right now ✅</p>"; return; }
       alertList.innerHTML = atRisk.map(c => {
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
-        const cls = days >= 10 ? "alert-red" : "alert-yellow";
-        const icon = days >= 10 ? "🔴" : "🟡";
-        return `<div class="alert-item ${cls}">${icon} <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
+        const cls = days >= 15 ? "alert-red" : "alert-yellow";
+        const icon = days >= 15 ? "🔴 Overdue" : "⚠️ Follow-up Needed";
+        return `<div class="alert-item ${cls}">${icon} — <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
       }).join("");
     }
 
@@ -206,9 +212,9 @@
       document.getElementById("tableBody").innerHTML = "";
       candidates.forEach((c, index) => {
         const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
-        let urgencyClass = "good", urgencyLabel = "✅ Good";
-        if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Urgent"; }
-        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Follow Up"; }
+        let urgencyClass = "good", urgencyLabel = "✅ On Track";
+        if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Overdue"; }
+        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "⚠️ Follow-up Needed"; }
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
             <td>${c.name}</td><td>${c.role}</td><td>${c.stage || "—"}</td><td>${c.email}</td>
