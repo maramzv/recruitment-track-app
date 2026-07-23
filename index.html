@@ -106,6 +106,10 @@
       <input id="role" placeholder="e.g. Sales Manager">
     </div>
     <div class="form-group">
+      <label>Department</label>
+      <input id="department" placeholder="e.g. Sales">
+    </div>
+    <div class="form-group">
       <label>Hiring Stage</label>
       <select id="stage">
         <option value="">-- Select Stage --</option>
@@ -126,6 +130,10 @@
       <label>Email</label>
       <input id="email" placeholder="e.g. sarah@email.com">
     </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input id="phone" placeholder="e.g. 555-123-4567">
+    </div>
     <br>
     <button id="addBtn" onclick="submitForm()">Add Candidate</button>
     <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
@@ -134,7 +142,7 @@
 
   <table>
     <thead>
-      <tr><th>Name</th><th>Role</th><th>Stage</th><th>Email</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
+      <tr><th>Name</th><th>Role</th><th>Department</th><th>Stage</th><th>Email</th><th>Phone</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
@@ -191,9 +199,11 @@
       editIndex = index;
       document.getElementById("name").value = c.name;
       document.getElementById("role").value = c.role;
+      document.getElementById("department").value = c.department;
       document.getElementById("stage").value = c.stage;
       document.getElementById("lastContact").value = c.lastContact;
       document.getElementById("email").value = c.email;
+      document.getElementById("phone").value = c.phone;
       document.getElementById("formTitle").textContent = "✏️ Edit Candidate";
       document.getElementById("addBtn").style.display = "none";
       document.getElementById("updateBtn").style.display = "inline-block";
@@ -203,7 +213,7 @@
 
     function cancelEdit() {
       editIndex = null;
-      ["name","role","email","lastContact"].forEach(id => document.getElementById(id).value = "");
+      ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("stage").value = "";
       document.getElementById("formTitle").textContent = "Add Candidate";
       document.getElementById("addBtn").style.display = "inline-block";
@@ -214,26 +224,28 @@
     function submitForm() {
       const name = document.getElementById("name").value;
       const role = document.getElementById("role").value;
+      const department = document.getElementById("department").value;
       const stage = document.getElementById("stage").value;
       const email = document.getElementById("email").value;
+      const phone = document.getElementById("phone").value;
       const lastContact = document.getElementById("lastContact").value;
       if (!name || !lastContact) { alert("Name and Last Contact Date are required!"); return; }
       const todayStr = new Date().toISOString().split("T")[0];
       if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
 
       if (editIndex !== null) {
-        candidates[editIndex] = { name, role, stage, email, lastContact };
+        candidates[editIndex] = { name, role, department, stage, email, phone, lastContact };
         editIndex = null;
         document.getElementById("formTitle").textContent = "Add Candidate";
         document.getElementById("addBtn").style.display = "inline-block";
         document.getElementById("updateBtn").style.display = "none";
         document.getElementById("cancelBtn").style.display = "none";
       } else {
-        candidates.push({ name, role, stage, email, lastContact });
+        candidates.push({ name, role, department, stage, email, phone, lastContact });
       }
 
       // Clear form
-      ["name","role","email","lastContact"].forEach(id => document.getElementById(id).value = "");
+      ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("stage").value = "";
       renderTable();
     }
@@ -248,7 +260,7 @@
         else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "⚠️ Follow-up Needed"; }
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
-            <td>${c.name}</td><td>${c.role}</td><td>${c.stage || "—"}</td><td>${c.email}</td>
+            <td>${c.name}</td><td>${c.role}</td><td>${c.department || "—"}</td><td>${c.stage || "—"}</td><td>${c.email}</td><td>${c.phone || "—"}</td>
             <td>${formatContactField(c.lastContact)}</td>
             <td>${urgencyLabel}</td>
             <td>
