@@ -26,6 +26,10 @@
     .delete-btn:hover { background: #c0392b; }
     .edit-btn { padding: 5px 10px; background: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
     .edit-btn:hover { background: #d68910; }
+    .notes-btn { padding: 5px 10px; background: white; color: #4a90e2; border: 1px solid #4a90e2; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .notes-btn:hover { background: #eaf2fc; }
+    .notes-btn.has-notes { background: #4a90e2; color: white; }
+    .notes-btn.has-notes:hover { background: #357abd; }
     .clear-btn { padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
     .clear-btn:hover { background: #c0392b; }
     .update-btn { padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
@@ -80,6 +84,18 @@
       <div class="modal-buttons">
         <button class="keep-btn" onclick="closeModal()">Keep Profile</button>
         <button class="confirm-delete-btn" onclick="confirmDelete()">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Modal -->
+  <div class="modal-overlay" id="notesModal">
+    <div class="modal">
+      <h3 style="color: #4a90e2;">📝 Candidate Notes</h3>
+      <textarea id="notesText" rows="5" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial, sans-serif; box-sizing: border-box;" placeholder="e.g. Left voicemail, said she'd call back Friday"></textarea>
+      <div class="modal-buttons" style="margin-top: 15px;">
+        <button class="keep-btn" onclick="closeNotesModal()">Cancel</button>
+        <button class="update-btn" onclick="saveNotes()">Save Notes</button>
       </div>
     </div>
   </div>
@@ -151,6 +167,7 @@
     let candidates = [];
     let deleteIndex = null;
     let editIndex = null;
+    let notesIndex = null;
 
     function formatContactField(dateStr) {
       const date = new Date(dateStr);
@@ -184,6 +201,25 @@
     function closeModal() {
       deleteIndex = null;
       document.getElementById("deleteModal").classList.remove("active");
+    }
+
+    function openNotesModal(index) {
+      notesIndex = index;
+      document.getElementById("notesText").value = candidates[index].notes || "";
+      document.getElementById("notesModal").classList.add("active");
+    }
+
+    function closeNotesModal() {
+      notesIndex = null;
+      document.getElementById("notesModal").classList.remove("active");
+    }
+
+    function saveNotes() {
+      if (notesIndex !== null) {
+        candidates[notesIndex].notes = document.getElementById("notesText").value;
+        renderTable();
+      }
+      closeNotesModal();
     }
 
     function confirmDelete() {
@@ -258,12 +294,14 @@
         let urgencyClass = "good", urgencyLabel = "✅ On Track";
         if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Overdue"; }
         else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "⚠️ Follow-up Needed"; }
+        const notesBtnClass = c.notes ? "notes-btn has-notes" : "notes-btn";
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
             <td>${c.name}</td><td>${c.role}</td><td>${c.department || "—"}</td><td>${c.stage || "—"}</td><td>${c.email}</td><td>${c.phone || "—"}</td>
             <td>${formatContactField(c.lastContact)}</td>
             <td>${urgencyLabel}</td>
             <td>
+              <button class="${notesBtnClass}" onclick="openNotesModal(${index})">📝 Notes</button>
               <button class="edit-btn" onclick="editCandidate(${index})">✏️ Edit</button>
               <button class="delete-btn" onclick="openModal(${index})">🗑️ Delete</button>
             </td>
