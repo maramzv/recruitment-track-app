@@ -87,16 +87,16 @@
     </div>
     <div class="form-group">
       <label>Last Contact Date</label>
-      <input id="lastContact" type="date">
+      <input id="lastContact" type="date" max="">
     </div>
     <div class="form-group">
       <label>Email</label>
       <input id="email" placeholder="e.g. sarah@email.com">
     </div>
     <br>
-    <button onclick="submitForm()">Add Candidate</button>
+    <button id="addBtn" onclick="submitForm()">Add Candidate</button>
     <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
-    <button class="clear-btn" onclick="clearAll()">🗑️ Clear All</button>
+    <button class="clear-btn" id="cancelBtn" style="display:none" onclick="cancelEdit()">❌ Cancel Edit</button>
   </div>
 
   <table>
@@ -158,9 +158,20 @@
       document.getElementById("lastContact").value = c.lastContact;
       document.getElementById("email").value = c.email;
       document.getElementById("formTitle").textContent = "✏️ Edit Candidate";
-      document.querySelector("button").style.display = "none";
+      document.getElementById("addBtn").style.display = "none";
       document.getElementById("updateBtn").style.display = "inline-block";
+      document.getElementById("cancelBtn").style.display = "inline-block";
       window.scrollTo(0, 0);
+    }
+
+    function cancelEdit() {
+      editIndex = null;
+      ["name","role","email","lastContact"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("stage").value = "";
+      document.getElementById("formTitle").textContent = "Add Candidate";
+      document.getElementById("addBtn").style.display = "inline-block";
+      document.getElementById("updateBtn").style.display = "none";
+      document.getElementById("cancelBtn").style.display = "none";
     }
 
     function submitForm() {
@@ -170,13 +181,16 @@
       const email = document.getElementById("email").value;
       const lastContact = document.getElementById("lastContact").value;
       if (!name || !lastContact) { alert("Name and Last Contact Date are required!"); return; }
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
 
       if (editIndex !== null) {
         candidates[editIndex] = { name, role, stage, email, lastContact };
         editIndex = null;
         document.getElementById("formTitle").textContent = "Add Candidate";
-        document.querySelector("button").style.display = "inline-block";
+        document.getElementById("addBtn").style.display = "inline-block";
         document.getElementById("updateBtn").style.display = "none";
+        document.getElementById("cancelBtn").style.display = "none";
       } else {
         candidates.push({ name, role, stage, email, lastContact });
       }
@@ -185,13 +199,6 @@
       ["name","role","email","lastContact"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("stage").value = "";
       renderTable();
-    }
-
-    function clearAll() {
-      if (confirm("Clear all candidates? This can't be undone.")) {
-        candidates = [];
-        renderTable();
-      }
     }
 
     function renderTable() {
@@ -216,6 +223,7 @@
       renderAlerts(candidates);
     }
 
+    document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
     renderTable();
   </script>
 </body>
