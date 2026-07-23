@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Candidate Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Lora:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(ellipse at top left, #3d1a2e 0%, #1a0d15 70%);
+      --accent-gold: #d4af6a;
+      --accent-gold-dark: #a8823f;
+      --card-bg: rgba(255,255,255,0.04);
+      --card-border: rgba(212,175,106,0.2);
+      --text-heading: #e8b96a;
+      --text-body: #e8d9c5;
+      --text-sub: #c98aa8;
+      --good-color: #7fc9a0;
+      --warn-color: #d4af6a;
+      --bad-color: #c9607f;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Lora', serif; padding: 30px; background: var(--bg-gradient) fixed; color: var(--text-body); }
+    h1 { font-family: 'Playfair Display', serif; color: var(--text-heading); font-size: 32px; margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; margin-top: 20px; overflow: hidden; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--card-border); }
+    th { background: rgba(212,175,106,0.12); color: var(--text-heading); font-family: 'Playfair Display', serif; font-weight: 700; }
+    td { color: var(--text-body); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .status-dot.good { background: var(--good-color); box-shadow: 0 0 6px var(--good-color); }
+    .status-dot.warn { background: var(--warn-color); box-shadow: 0 0 6px var(--warn-color); }
+    .status-dot.bad { background: var(--bad-color); box-shadow: 0 0 6px var(--bad-color); }
+    .urgent, .moderate, .good { background: transparent; }
+    .form-box { background: var(--card-bg); border: 1px solid var(--card-border); padding: 26px; border-radius: 14px; margin-bottom: 20px; }
+    .form-box h3 { font-family: 'Playfair Display', serif; color: var(--text-heading); margin-top: 0; }
+    .divider-gold { height: 1px; background: linear-gradient(90deg, transparent, var(--accent-gold), transparent); opacity: 0.5; margin: 16px 0; }
+    .heading-mark { color: var(--accent-gold); font-size: 13px; margin-right: 8px; }
+    .form-group { display: inline-block; margin: 5px; }
+    .form-group label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-gold); margin-bottom: 4px; }
+    input, select { padding: 8px; border: 1px solid var(--card-border); border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--text-body); font-family: 'Lora', serif; }
+    input[type="date"] { color-scheme: dark; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8) sepia(1) saturate(3) hue-rotate(0deg); cursor: pointer; }
+    button { padding: 10px 20px; background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark)); color: #2b1220; border: none; border-radius: 8px; cursor: pointer; font-family: 'Lora', serif; font-weight: 600; }
+    button:hover { filter: brightness(1.08); }
+    .alert-box { background: var(--card-bg); border: 1px solid var(--card-border); padding: 26px; border-radius: 14px; margin-bottom: 20px; }
+    .alert-box h3 { font-family: 'Playfair Display', serif; color: var(--text-heading); margin-top: 0; }
+    .alert-item { display: flex; align-items: center; padding: 10px 12px; margin: 8px 0; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); color: var(--text-body); }
+    .alert-red .status-dot, .alert-yellow .status-dot { margin-right: 8px; }
+    .delete-btn { padding: 5px 10px; background: #7a2438; color: #f5c9d4; border: 1px solid rgba(212,175,106,0.2); border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .delete-btn:hover { filter: brightness(1.15); }
+    .edit-btn { padding: 5px 10px; background: rgba(212,175,106,0.15); color: var(--accent-gold); border: 1px solid var(--card-border); border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .edit-btn:hover { background: rgba(212,175,106,0.25); }
+    .notes-btn { padding: 5px 10px; background: transparent; color: var(--accent-gold); border: 1px solid var(--accent-gold); border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .notes-btn:hover { background: rgba(212,175,106,0.15); }
+    .notes-btn.has-notes { background: var(--accent-gold); color: #2b1220; }
+    .notes-btn.has-notes:hover { filter: brightness(1.1); }
+    .clear-btn { padding: 10px 20px; background: #7a2438; color: #f5c9d4; border: 1px solid rgba(212,175,106,0.2); border-radius: 8px; cursor: pointer; margin-left: 10px; font-family: 'Lora', serif; }
+    .clear-btn:hover { filter: brightness(1.15); }
+    .update-btn { padding: 10px 20px; background: #1f6b46; color: #d4f5e0; border: 1px solid rgba(212,175,106,0.2); border-radius: 8px; cursor: pointer; margin-left: 5px; font-family: 'Lora', serif; }
+    .update-btn:hover { filter: brightness(1.15); }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #2b1220; border: 1px solid var(--card-border); padding: 30px; border-radius: 14px; max-width: 400px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    .modal h3 { font-family: 'Playfair Display', serif; color: var(--bad-color); margin-bottom: 10px; }
+    .modal p { color: var(--text-body); margin-bottom: 20px; }
+    .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+    .keep-btn { padding: 10px 20px; background: rgba(212,175,106,0.15); color: var(--accent-gold); border: 1px solid var(--card-border); border-radius: 8px; cursor: pointer; font-family: 'Lora', serif; }
+    .confirm-delete-btn { padding: 10px 20px; background: #7a2438; color: #f5c9d4; border: 1px solid var(--card-border); border-radius: 8px; cursor: pointer; font-family: 'Lora', serif; }
+
+    /* Welcome Screen */
+    .welcome-overlay { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13,6,10,0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 2000; justify-content: center; align-items: center; }
+    .welcome-overlay.hidden { display: none; }
+    .welcome-card { background: var(--bg-gradient); border: 1px solid var(--card-border); padding: 45px; border-radius: 16px; max-width: 520px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+    .welcome-card h2 { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text-heading); margin-bottom: 5px; }
+    .welcome-card h3 { font-family: 'Lora', serif; font-style: italic; font-size: 18px; color: var(--text-sub); margin-bottom: 20px; font-weight: 400; }
+    .welcome-card p { font-size: 15px; color: var(--text-body); margin-bottom: 20px; line-height: 1.6; }
+    .welcome-card ul { list-style: none; padding: 0; text-align: left; margin-bottom: 25px; }
+    .welcome-card li { font-size: 14px; color: var(--text-body); margin-bottom: 10px; }
+    .start-btn { padding: 14px 32px; background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-dark)); color: #2b1220; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; }
+    .start-btn:hover { filter: brightness(1.08); }
+  </style>
+</head>
+<body>
+  <h1>Candidate Tracker</h1>
+
+  <!-- Welcome Screen -->
+  <div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-card">
+      <h2>Hello, Recruiter! 👋</h2>
+      <h3>Welcome to Candidate Tracker.</h3>
+      <p>Built to help you juggle multiple candidates at once. If you've ever lost track of who you last followed up with or let a promising candidate go cold, this tool keeps it visible.</p>
+      <ul>
+        <li>✅ Add candidates and track their hiring stage</li>
+        <li>✅ Log your last contact date</li>
+        <li>✅ Get flagged automatically when someone's overdue for a follow-up</li>
+      </ul>
+      <button class="start-btn" onclick="closeWelcome()">Start Tracking</button>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <h3>⚠️ Delete Candidate?</h3>
+      <p>This candidate and <strong>all their information</strong> will be permanently removed. This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button class="keep-btn" onclick="closeModal()">Keep Profile</button>
+        <button class="confirm-delete-btn" onclick="confirmDelete()">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Modal -->
+  <div class="modal-overlay" id="notesModal">
+    <div class="modal">
+      <h3 style="color: #4a90e2;">📝 Candidate Notes</h3>
+      <textarea id="notesText" rows="5" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial, sans-serif; box-sizing: border-box;" placeholder="e.g. Left voicemail, said she'd call back Friday"></textarea>
+      <div class="modal-buttons" style="margin-top: 15px;">
+        <button class="keep-btn" onclick="closeNotesModal()">Cancel</button>
+        <button class="update-btn" onclick="saveNotes()">Save Notes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert-box">
+    <h3><span class="heading-mark">◆</span>Candidates Needing Follow-Up</h3>
+    <div class="divider-gold"></div>
+    <div id="alertList"><p><span class="status-dot good"></span>No alerts right now</p></div>
+    <p style="font-size: 13px; color: #fffafa; margin-top: 15px;">
+      <strong>Status guide:</strong>
+      <span class="status-dot good"></span>On Track (0–7 days since contact) &nbsp;|&nbsp;
+      <span class="status-dot warn"></span>Follow-up Needed (8–14 days) &nbsp;|&nbsp;
+      <span class="status-dot bad"></span>Overdue (15+ days)
+    </p>
+  </div>
+
+  <div class="form-box">
+    <h3 id="formTitle">Add Candidate</h3>
+    <div class="divider-gold"></div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input id="name" placeholder="e.g. Sarah Jones">
+    </div>
+    <div class="form-group">
+      <label>Role</label>
+      <input id="role" placeholder="e.g. Sales Manager">
+    </div>
+    <div class="form-group">
+      <label>Department</label>
+      <input id="department" placeholder="e.g. Sales">
+    </div>
+    <div class="form-group">
+      <label>Hiring Stage</label>
+      <select id="stage">
+        <option value="">-- Select Stage --</option>
+        <option value="Applied">Applied</option>
+        <option value="Screening">Screening</option>
+        <option value="Interview 1">Interview 1</option>
+        <option value="Interview 2">Interview 2</option>
+        <option value="Offer">Offer</option>
+        <option value="Hired">Hired</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Last Contact Date</label>
+      <input id="lastContact" type="date" max="">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input id="email" placeholder="e.g. sarah@email.com">
+    </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input id="phone" placeholder="e.g. 555-123-4567">
+    </div>
+    <br>
+    <button id="addBtn" onclick="submitForm()">Add Candidate</button>
+    <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
+    <button class="clear-btn" id="cancelBtn" style="display:none" onclick="cancelEdit()">❌ Cancel Edit</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Role</th><th>Department</th><th>Stage</th><th>Email</th><th>Phone</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    // TEMP TEST DATA — remove this block before real use
+    function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split("T")[0]; }
+    let candidates = [
+      { name: "Sarah Jones", role: "Sales Manager", department: "Sales", stage: "Interview 1", email: "sarah@email.com", phone: "555-111-2222", lastContact: daysAgo(2) },
+      { name: "Dan Lee", role: "Marketing Coordinator", department: "Marketing", stage: "Screening", email: "dan@email.com", phone: "555-222-3333", lastContact: daysAgo(10) },
+      { name: "Ana Cruz", role: "Software Engineer", department: "Engineering", stage: "Offer", email: "ana@email.com", phone: "555-333-4444", lastContact: daysAgo(20) }
+    ];
+    // END TEMP TEST DATA
+    let deleteIndex = null;
+    let editIndex = null;
+    let notesIndex = null;
+
+    function formatContactField(dateStr) {
+      const date = new Date(dateStr);
+      const days = Math.floor((new Date() - date) / 86400000);
+      const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      return `${days} days (${formatted})`;
+    }
+
+    function renderAlerts(candidateList) {
+      const today = new Date();
+      const atRisk = candidateList.filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 8);
+      const alertList = document.getElementById("alertList");
+      if (atRisk.length === 0) { alertList.innerHTML = "<p><span class=\"status-dot good\"></span>No alerts right now</p>"; return; }
+      alertList.innerHTML = atRisk.map(c => {
+        const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
+        const cls = days >= 15 ? "alert-red" : "alert-yellow";
+        const dotCls = days >= 15 ? "bad" : "warn";
+        const label = days >= 15 ? "Overdue" : "Follow-up Needed";
+        return `<div class="alert-item ${cls}"><span class="status-dot ${dotCls}"></span><strong>${c.name}</strong> — ${c.role} — ${c.stage} — ${label}, no update for ${days} days</div>`;
+      }).join("");
+    }
+
+    function closeWelcome() {
+      document.getElementById("welcomeOverlay").classList.add("hidden");
+    }
+
+    function openModal(index) {
+      deleteIndex = index;
+      document.getElementById("deleteModal").classList.add("active");
+    }
+
+    function closeModal() {
+      deleteIndex = null;
+      document.getElementById("deleteModal").classList.remove("active");
+    }
+
+    function openNotesModal(index) {
+      notesIndex = index;
+      document.getElementById("notesText").value = candidates[index].notes || "";
+      document.getElementById("notesModal").classList.add("active");
+    }
+
+    function closeNotesModal() {
+      notesIndex = null;
+      document.getElementById("notesModal").classList.remove("active");
+    }
+
+    function saveNotes() {
+      if (notesIndex !== null) {
+        candidates[notesIndex].notes = document.getElementById("notesText").value;
+        renderTable();
+      }
+      closeNotesModal();
+    }
+
+    function confirmDelete() {
+      if (deleteIndex !== null) {
+        candidates.splice(deleteIndex, 1);
+        renderTable();
+      }
+      closeModal();
+    }
+
+    function editCandidate(index) {
+      const c = candidates[index];
+      editIndex = index;
+      document.getElementById("name").value = c.name;
+      document.getElementById("role").value = c.role;
+      document.getElementById("department").value = c.department;
+      document.getElementById("stage").value = c.stage;
+      document.getElementById("lastContact").value = c.lastContact;
+      document.getElementById("email").value = c.email;
+      document.getElementById("phone").value = c.phone;
+      document.getElementById("formTitle").textContent = "✏️ Edit Candidate";
+      document.getElementById("addBtn").style.display = "none";
+      document.getElementById("updateBtn").style.display = "inline-block";
+      document.getElementById("cancelBtn").style.display = "inline-block";
+      window.scrollTo(0, 0);
+    }
+
+    function cancelEdit() {
+      editIndex = null;
+      ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("stage").value = "";
+      document.getElementById("formTitle").textContent = "Add Candidate";
+      document.getElementById("addBtn").style.display = "inline-block";
+      document.getElementById("updateBtn").style.display = "none";
+      document.getElementById("cancelBtn").style.display = "none";
+    }
+
+    function submitForm() {
+      const name = document.getElementById("name").value;
+      const role = document.getElementById("role").value;
+      const department = document.getElementById("department").value;
+      const stage = document.getElementById("stage").value;
+      const email = document.getElementById("email").value;
+      const phone = document.getElementById("phone").value;
+      const lastContact = document.getElementById("lastContact").value;
+      if (!name || !lastContact) { alert("Name and Last Contact Date are required!"); return; }
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
+
+      if (editIndex !== null) {
+        candidates[editIndex] = { name, role, department, stage, email, phone, lastContact };
+        editIndex = null;
+        document.getElementById("formTitle").textContent = "Add Candidate";
+        document.getElementById("addBtn").style.display = "inline-block";
+        document.getElementById("updateBtn").style.display = "none";
+        document.getElementById("cancelBtn").style.display = "none";
+      } else {
+        candidates.push({ name, role, department, stage, email, phone, lastContact });
+      }
+
+      // Clear form
+      ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("stage").value = "";
+      renderTable();
+    }
+
+    function renderTable() {
+      candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
+      document.getElementById("tableBody").innerHTML = "";
+      candidates.forEach((c, index) => {
+        const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
+        let urgencyClass = "good", dotClass = "good", urgencyLabel = "On Track";
+        if (days > 14) { urgencyClass = "urgent"; dotClass = "bad"; urgencyLabel = "Overdue"; }
+        else if (days > 7) { urgencyClass = "moderate"; dotClass = "warn"; urgencyLabel = "Follow-up Needed"; }
+        const notesBtnClass = c.notes ? "notes-btn has-notes" : "notes-btn";
+        document.getElementById("tableBody").innerHTML += `
+          <tr class="${urgencyClass}">
+            <td>${c.name}</td><td>${c.role}</td><td>${c.department || "—"}</td><td>${c.stage || "—"}</td><td>${c.email}</td><td>${c.phone || "—"}</td>
+            <td>${formatContactField(c.lastContact)}</td>
+            <td><span class="status-dot ${dotClass}"></span>${urgencyLabel}</td>
+            <td>
+              <button class="${notesBtnClass}" onclick="openNotesModal(${index})">📝 Notes</button>
+              <button class="edit-btn" onclick="editCandidate(${index})">✏️ Edit</button>
+              <button class="delete-btn" onclick="openModal(${index})">🗑️ Delete</button>
+            </td>
+          </tr>`;
+      });
+      renderAlerts(candidates);
+    }
+
+    document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
+    renderTable();
+  </script>
+</body>
+</html>
