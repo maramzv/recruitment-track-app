@@ -40,10 +40,37 @@
     .modal-buttons { display: flex; gap: 10px; justify-content: center; }
     .keep-btn { padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; }
     .confirm-delete-btn { padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+    /* Welcome Screen */
+    .welcome-overlay { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(245,245,245,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 2000; justify-content: center; align-items: center; }
+    .welcome-overlay.hidden { display: none; }
+    .welcome-card { background: white; padding: 45px; border-radius: 14px; max-width: 520px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .welcome-card h2 { font-size: 28px; color: #333; margin-bottom: 5px; }
+    .welcome-card h3 { font-size: 20px; color: #4a90e2; margin-bottom: 20px; }
+    .welcome-card p { font-size: 16px; color: #555; margin-bottom: 20px; line-height: 1.5; }
+    .welcome-card ul { list-style: none; padding: 0; text-align: left; margin-bottom: 25px; }
+    .welcome-card li { font-size: 15px; color: #333; margin-bottom: 10px; }
+    .start-btn { padding: 14px 32px; background: #4a90e2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+    .start-btn:hover { background: #357abd; }
   </style>
 </head>
 <body>
   <h1>Candidate Tracker</h1>
+
+  <!-- Welcome Screen -->
+  <div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-card">
+      <h2>Hello, Recruiter! 👋</h2>
+      <h3>Welcome to Candidate Tracker.</h3>
+      <p>Built to help you juggle multiple candidates at once. If you've ever lost track of who you last followed up with or let a promising candidate go cold, this tool keeps it visible.</p>
+      <ul>
+        <li>✅ Add candidates and track their hiring stage</li>
+        <li>✅ Log your last contact date</li>
+        <li>✅ Get flagged automatically when someone's overdue for a follow-up</li>
+      </ul>
+      <button class="start-btn" onclick="closeWelcome()">Start Tracking</button>
+    </div>
+  </div>
 
   <!-- Delete Confirmation Modal -->
   <div class="modal-overlay" id="deleteModal">
@@ -135,6 +162,10 @@
         const icon = days >= 15 ? "🔴 Overdue" : "⚠️ Follow-up Needed";
         return `<div class="alert-item ${cls}">${icon} — <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
       }).join("");
+    }
+
+    function closeWelcome() {
+      document.getElementById("welcomeOverlay").classList.add("hidden");
     }
 
     function openModal(index) {
