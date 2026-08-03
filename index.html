@@ -56,6 +56,17 @@
     .welcome-card li { font-size: 15px; color: #333; margin-bottom: 10px; }
     .start-btn { padding: 14px 32px; background: #4a90e2; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
     .start-btn:hover { background: #357abd; }
+
+    /* Tabs */
+    .tabs-nav { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { padding: 10px 20px; background: white; color: #4a90e2; border: 1px solid #4a90e2; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .tab-btn:hover { background: #eaf2fc; }
+    .tab-btn.active { background: #4a90e2; color: white; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .placeholder-box { background: white; padding: 20px; border-radius: 8px; }
+    .placeholder-box h2 { color: #333; margin-top: 0; }
+    .placeholder-box ul { line-height: 1.8; color: #444; }
   </style>
 </head>
 <body>
@@ -100,68 +111,116 @@
     </div>
   </div>
 
-  <div class="alert-box">
-    <h3>🚨 Candidates Needing Follow-Up</h3>
-    <div id="alertList"><p>No alerts right now ✅</p></div>
-    <p style="font-size: 13px; color: #666; margin-top: 15px;">
-      <strong>Status guide:</strong>
-      ✅ On Track (0–7 days since contact) &nbsp;|&nbsp;
-      ⚠️ Follow-up Needed (8–14 days) &nbsp;|&nbsp;
-      🔴 Overdue (15+ days)
-    </p>
+  <div class="tabs-nav">
+    <button class="tab-btn" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button class="tab-btn active" onclick="showTab('pipeline', this)">Candidate Pipeline</button>
+    <button class="tab-btn" onclick="showTab('analytics', this)">Workforce Analytics</button>
+    <button class="tab-btn" onclick="showTab('intelligence', this)">Hiring Intelligence</button>
   </div>
 
-  <div class="form-box">
-    <h3 id="formTitle">Add Candidate</h3>
-    <div class="form-group">
-      <label>Full Name</label>
-      <input id="name" placeholder="e.g. Sarah Jones">
+  <div class="tab-panel" id="tab-dashboard">
+    <div class="placeholder-box">
+      <h2>Dashboard (Planned)</h2>
+      <p>The at-a-glance home screen. Will pull the single most important thing from each tab below, with a click-through to the full tab for detail.</p>
+      <ul>
+        <li>🚨 <strong>Follow-up alerts</strong> — candidates overdue for contact, with a one-click follow-up action (from Candidate Pipeline)</li>
+        <li>📋 <strong>Pipeline snapshot</strong> — active candidate count, open roles by department</li>
+        <li>📈 <strong>Workforce snapshot</strong> — one or two key stats from Workforce Analytics</li>
+        <li>💡 <strong>Top hiring recommendation</strong> — headline insight from Hiring Intelligence</li>
+      </ul>
     </div>
-    <div class="form-group">
-      <label>Role</label>
-      <input id="role" placeholder="e.g. Sales Manager">
-    </div>
-    <div class="form-group">
-      <label>Department</label>
-      <input id="department" placeholder="e.g. Sales">
-    </div>
-    <div class="form-group">
-      <label>Hiring Stage</label>
-      <select id="stage">
-        <option value="">-- Select Stage --</option>
-        <option value="Applied">Applied</option>
-        <option value="Screening">Screening</option>
-        <option value="Interview 1">Interview 1</option>
-        <option value="Interview 2">Interview 2</option>
-        <option value="Offer">Offer</option>
-        <option value="Hired">Hired</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Last Contact Date</label>
-      <input id="lastContact" type="date" max="">
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input id="email" placeholder="e.g. sarah@email.com">
-    </div>
-    <div class="form-group">
-      <label>Phone</label>
-      <input id="phone" placeholder="e.g. 555-123-4567">
-    </div>
-    <br>
-    <button id="addBtn" onclick="submitForm()">Add Candidate</button>
-    <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
-    <button class="clear-btn" id="cancelBtn" style="display:none" onclick="cancelEdit()">❌ Cancel Edit</button>
   </div>
 
-  <table>
-    <thead>
-      <tr><th>Name</th><th>Role</th><th>Department</th><th>Stage</th><th>Email</th><th>Phone</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <div class="tab-panel active" id="tab-pipeline">
+    <div class="alert-box">
+      <h3>🚨 Candidates Needing Follow-Up</h3>
+      <div id="alertList"><p>No alerts right now ✅</p></div>
+      <p style="font-size: 13px; color: #666; margin-top: 15px;">
+        <strong>Status guide:</strong>
+        ✅ On Track (0–7 days since contact) &nbsp;|&nbsp;
+        ⚠️ Follow-up Needed (8–14 days) &nbsp;|&nbsp;
+        🔴 Overdue (15+ days)
+      </p>
+    </div>
+
+    <div class="form-box">
+      <h3 id="formTitle">Add Candidate</h3>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input id="name" placeholder="e.g. Sarah Jones">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <input id="role" placeholder="e.g. Sales Manager">
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input id="department" placeholder="e.g. Sales">
+      </div>
+      <div class="form-group">
+        <label>Hiring Stage</label>
+        <select id="stage">
+          <option value="">-- Select Stage --</option>
+          <option value="Applied">Applied</option>
+          <option value="Screening">Screening</option>
+          <option value="Interview 1">Interview 1</option>
+          <option value="Interview 2">Interview 2</option>
+          <option value="Offer">Offer</option>
+          <option value="Hired">Hired</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Last Contact Date</label>
+        <input id="lastContact" type="date" max="">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="email" placeholder="e.g. sarah@email.com">
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input id="phone" placeholder="e.g. 555-123-4567">
+      </div>
+      <br>
+      <button id="addBtn" onclick="submitForm()">Add Candidate</button>
+      <button class="update-btn" id="updateBtn" style="display:none" onclick="submitForm()">✅ Update Candidate</button>
+      <button class="clear-btn" id="cancelBtn" style="display:none" onclick="cancelEdit()">❌ Cancel Edit</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Role</th><th>Department</th><th>Stage</th><th>Email</th><th>Phone</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="tab-panel" id="tab-analytics">
+    <div class="placeholder-box">
+      <h2>Workforce Analytics (Planned)</h2>
+      <p>Chart-based, concise breakdown of the historical Kaggle workforce dataset — read-only, not part of the live candidate pipeline.</p>
+      <ul>
+        <li>Recruitment source effectiveness</li>
+        <li>Department overview</li>
+        <li>Employee status / retention</li>
+        <li>Performance & satisfaction averages</li>
+        <li>Turnover reasons</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-intelligence">
+    <div class="placeholder-box">
+      <h2>Hiring Intelligence (Planned)</h2>
+      <p>Cross-referencing live pipeline candidates with historical workforce dataset metrics.</p>
+      <ul>
+        <li>Department insights when a candidate's department is selected</li>
+        <li>Recruitment source recommendations based on historical outcomes</li>
+        <li>When a candidate is marked Hired, contributes a new record here alongside historical data</li>
+      </ul>
+    </div>
+  </div>
 
   <script>
     let candidates = [];
@@ -191,6 +250,13 @@
 
     function closeWelcome() {
       document.getElementById("welcomeOverlay").classList.add("hidden");
+    }
+
+    function showTab(name, btn) {
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("tab-" + name).classList.add("active");
+      btn.classList.add("active");
     }
 
     function openModal(index) {
