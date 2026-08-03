@@ -113,7 +113,8 @@
     .stacked-bar-row { margin-bottom: 12px; }
     .stacked-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 4px; }
     .stacked-bar-track { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #f0f0f0; }
-    .stacked-bar-counts { font-size: 10px; color: #aaa; margin-top: 3px; }
+    .stacked-bar-segment { display: flex; align-items: center; justify-content: flex-end; box-sizing: border-box; padding-right: 4px; overflow: hidden; }
+    .stacked-bar-segment-count { font-size: 10px; color: rgba(255,255,255,0.75); white-space: nowrap; }
     .stacked-bar-stats { font-size: 11px; color: #888; margin-top: 4px; }
     .stacked-bar-stat-highlight { font-weight: bold; color: #333; }
     .stacked-bar-segment.active { background: #27ae60; }
@@ -1183,11 +1184,10 @@
         <div class="stacked-bar-row">
           <div class="stacked-bar-label"><span><span class="stacked-bar-rank">#${i + 1}</span>${r.name} — ${highlightIf(`${r.total} ${countLabel}`, sortField === "total")}</span><span>${highlightIf(`${activePct.toFixed(0)}% Retention`, sortField === "active")}</span></div>
           <div class="stacked-bar-track">
-            <div class="stacked-bar-segment active" style="width: ${activePct}%;" title="Active: ${r.active}"></div>
-            <div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"></div>
-            <div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"></div>
+            ${r.active > 0 ? `<div class="stacked-bar-segment active" style="width: ${activePct}%;" title="Active: ${r.active}"><span class="stacked-bar-segment-count">${r.active}</span></div>` : ""}
+            ${r.voluntaryLeft > 0 ? `<div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"><span class="stacked-bar-segment-count">${r.voluntaryLeft}</span></div>` : ""}
+            ${r.terminatedCause > 0 ? `<div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"><span class="stacked-bar-segment-count">${r.terminatedCause}</span></div>` : ""}
           </div>
-          <div class="stacked-bar-counts">${r.active} Active &nbsp;·&nbsp; ${r.voluntaryLeft} Voluntary Left &nbsp;·&nbsp; ${r.terminatedCause} Terminated</div>
           <div class="stacked-bar-stats">${statLabel("Avg Performance", `${r.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")} &nbsp;·&nbsp; ${statLabel("Avg Tenure", `${r.avgTenure.toFixed(1)} yrs`, sortField === "avgTenure")} &nbsp;·&nbsp; ${statLabel("Avg Satisfaction", `${r.avgSatisfaction.toFixed(1)} / 5`, sortField === "avgSatisfaction")}</div>
         </div>`;
       }).join("");
