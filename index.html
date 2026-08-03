@@ -113,6 +113,7 @@
     .stacked-bar-row { margin-bottom: 12px; }
     .stacked-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 4px; }
     .stacked-bar-track { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #f0f0f0; }
+    .stacked-bar-counts { font-size: 10px; color: #aaa; margin-top: 3px; }
     .stacked-bar-stats { font-size: 11px; color: #888; margin-top: 4px; }
     .stacked-bar-stat-highlight { font-weight: bold; color: #333; }
     .stacked-bar-segment.active { background: #27ae60; }
@@ -413,6 +414,7 @@
             <th class="sortable-th" onclick="sortSourceTable('active')">Active<span class="table-sort-arrow" id="srcArrow-active"></span></th>
             <th class="sortable-th" onclick="sortSourceTable('voluntaryLeft')">Voluntary Left<span class="table-sort-arrow" id="srcArrow-voluntaryLeft"></span></th>
             <th class="sortable-th" onclick="sortSourceTable('terminatedCause')">Terminated (Cause)<span class="table-sort-arrow" id="srcArrow-terminatedCause"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('retentionRate')">Retention Rate<span class="table-sort-arrow" id="srcArrow-retentionRate"></span></th>
             <th class="sortable-th" onclick="sortSourceTable('avgTenure')">Avg Tenure (yrs)<span class="table-sort-arrow" id="srcArrow-avgTenure"></span></th>
             <th class="sortable-th" onclick="sortSourceTable('avgPerformance')">Avg Performance<span class="table-sort-arrow" id="srcArrow-avgPerformance"></span></th>
             <th class="sortable-th" onclick="sortSourceTable('avgEngagement')">Avg Engagement<span class="table-sort-arrow" id="srcArrow-avgEngagement"></span></th>
@@ -427,7 +429,7 @@
           <div class="chart-sort-row">
             <label for="sourceSortSelect">Sort by</label>
             <select id="sourceSortSelect" onchange="renderSourceChart()">
-              <option value="active">% Active (highest first)</option>
+              <option value="active">% Retention (highest first)</option>
               <option value="avgPerformance">Avg Performance</option>
               <option value="avgTenure">Avg Tenure</option>
               <option value="avgSatisfaction">Avg Satisfaction</option>
@@ -477,7 +479,7 @@
           <div class="chart-sort-row">
             <label for="deptSortSelect">Sort by</label>
             <select id="deptSortSelect" onchange="renderDepartmentChart()">
-              <option value="active">% Active (highest first)</option>
+              <option value="active">% Retention (highest first)</option>
               <option value="avgPerformance">Avg Performance</option>
               <option value="avgTenure">Avg Tenure</option>
               <option value="avgSatisfaction">Avg Satisfaction</option>
@@ -526,7 +528,7 @@
           <div class="chart-sort-row">
             <label for="teamSortSelect">Sort by</label>
             <select id="teamSortSelect" onchange="renderTeamChart()">
-              <option value="active">% Active (highest first)</option>
+              <option value="active">% Retention (highest first)</option>
               <option value="avgPerformance">Avg Performance</option>
               <option value="avgTenure">Avg Tenure</option>
               <option value="avgSatisfaction">Avg Satisfaction</option>
@@ -1005,6 +1007,7 @@
           active: active.length,
           voluntaryLeft: voluntaryLeft.length,
           terminatedCause: terminatedCause.length,
+          retentionRate: (active.length / group.length) * 100,
           avgTenure: average(group.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination))),
           avgPerformance: average(group.map(e => e.performanceScoreValue)),
           avgEngagement: average(group.map(e => e.engagementSurvey)),
@@ -1013,7 +1016,7 @@
       });
     }
 
-    const SOURCE_TABLE_FIELDS = ["source", "hired", "active", "voluntaryLeft", "terminatedCause", "avgTenure", "avgPerformance", "avgEngagement", "avgSatisfaction"];
+    const SOURCE_TABLE_FIELDS = ["source", "hired", "active", "voluntaryLeft", "terminatedCause", "retentionRate", "avgTenure", "avgPerformance", "avgEngagement", "avgSatisfaction"];
 
     function sortSourceTable(field) {
       sortTableColumn("source", field, "srcArrow", SOURCE_TABLE_FIELDS, getSourceStats(), renderSourceStats);
@@ -1028,6 +1031,7 @@
           <td>${s.active}</td>
           <td>${s.voluntaryLeft}</td>
           <td>${s.terminatedCause}</td>
+          <td>${s.retentionRate.toFixed(0)}%</td>
           <td>${s.avgTenure.toFixed(1)}</td>
           <td>${s.avgPerformance.toFixed(1)} / 4</td>
           <td>${s.avgEngagement.toFixed(2)} / 5</td>
@@ -1177,12 +1181,13 @@
         const terminatedPct = (r.terminatedCause / r.total) * 100;
         return `
         <div class="stacked-bar-row">
-          <div class="stacked-bar-label"><span><span class="stacked-bar-rank">#${i + 1}</span>${r.name} — ${highlightIf(`${r.total} ${countLabel}`, sortField === "total")}</span><span>${highlightIf(`${activePct.toFixed(0)}% Active`, sortField === "active")}</span></div>
+          <div class="stacked-bar-label"><span><span class="stacked-bar-rank">#${i + 1}</span>${r.name} — ${highlightIf(`${r.total} ${countLabel}`, sortField === "total")}</span><span>${highlightIf(`${activePct.toFixed(0)}% Retention`, sortField === "active")}</span></div>
           <div class="stacked-bar-track">
             <div class="stacked-bar-segment active" style="width: ${activePct}%;" title="Active: ${r.active}"></div>
             <div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"></div>
             <div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"></div>
           </div>
+          <div class="stacked-bar-counts">${r.active} Active &nbsp;·&nbsp; ${r.voluntaryLeft} Voluntary Left &nbsp;·&nbsp; ${r.terminatedCause} Terminated</div>
           <div class="stacked-bar-stats">${statLabel("Avg Performance", `${r.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")} &nbsp;·&nbsp; ${statLabel("Avg Tenure", `${r.avgTenure.toFixed(1)} yrs`, sortField === "avgTenure")} &nbsp;·&nbsp; ${statLabel("Avg Satisfaction", `${r.avgSatisfaction.toFixed(1)} / 5`, sortField === "avgSatisfaction")}</div>
         </div>`;
       }).join("");
