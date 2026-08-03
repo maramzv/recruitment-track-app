@@ -272,7 +272,7 @@ const employees = [
         "department":  "Production",
         "position":  "Production Technician I",
         "managerName":  "Michael Albert",
-        "recruitmentSource":  "On-line Web application",
+        "recruitmentSource":  "Other",
         "employmentStatus":  "Voluntarily Terminated",
         "dateOfHire":  "2012-09-24",
         "dateOfTermination":  "2017-04-06",

@@ -88,6 +88,34 @@
     .analytics-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .analytics-table th, .analytics-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
     .analytics-table th { background: #f0f0f0; color: #333; }
+    .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; }
+    .view-toggle { display: flex; gap: 0; flex-shrink: 0; }
+    .view-toggle-btn { padding: 6px 14px; background: white; color: #4a90e2; border: 1px solid #4a90e2; cursor: pointer; font-size: 12px; }
+    .view-toggle-btn:first-child { border-radius: 4px 0 0 4px; }
+    .view-toggle-btn:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+    .view-toggle-btn.active { background: #4a90e2; color: white; }
+    .mini-chart { margin-bottom: 24px; }
+    .mini-chart h4 { margin: 0 0 10px 0; color: #333; font-size: 14px; }
+    .mini-chart-desc { font-weight: normal; color: #888; font-size: 12px; }
+
+    /* Stacked composition bars */
+    .stacked-bar-legend { display: flex; gap: 15px; margin-bottom: 12px; font-size: 12px; color: #555; }
+    .legend-swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+    .legend-swatch.active { background: #27ae60; }
+    .legend-swatch.voluntary { background: #f39c12; }
+    .legend-swatch.terminated { background: #e74c3c; }
+    .stacked-bar-row { margin-bottom: 12px; max-width: 460px; }
+    .stacked-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 4px; }
+    .stacked-bar-track { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #f0f0f0; }
+    .stacked-bar-segment.active { background: #27ae60; }
+    .stacked-bar-segment.voluntary { background: #f39c12; }
+    .stacked-bar-segment.terminated { background: #e74c3c; }
+
+    /* Donut charts */
+    .donut-row { display: flex; gap: 30px; margin: 15px 0 20px 0; flex-wrap: wrap; }
+    .donut-block { flex: 1; min-width: 200px; }
+    .donut-chart { width: 130px; height: 130px; border-radius: 50%; margin: 0 auto 12px auto; }
+    .donut-legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #555; align-items: center; }
 
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
@@ -349,10 +377,18 @@
     <p class="kpi-group-label">Trends</p>
     <div class="kpi-row" id="kpiRowTrends"></div>
 
-    <div class="analytics-card">
-      <h2>Source Effectiveness</h2>
-      <p class="analytics-subtitle">How each recruiting channel has historically performed on retention, tenure, and quality of hire.</p>
-      <table class="analytics-table">
+    <div class="analytics-card" id="sourceCard">
+      <div class="card-header-row">
+        <div>
+          <h2>Source Effectiveness</h2>
+          <p class="analytics-subtitle">How each recruiting channel has historically performed on retention, tenure, and quality of hire.</p>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="setSourceView('table', this)">Table</button>
+          <button class="view-toggle-btn" onclick="setSourceView('chart', this)">Chart</button>
+        </div>
+      </div>
+      <table class="analytics-table" id="sourceTableView">
         <thead>
           <tr>
             <th>Source</th><th>Hired</th><th>Active</th><th>Voluntary Left</th><th>Terminated (Cause)</th>
@@ -361,12 +397,31 @@
         </thead>
         <tbody id="sourceStatsBody"></tbody>
       </table>
+      <div id="sourceChartView" style="display:none;">
+        <div class="mini-chart">
+          <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired through each source</span></h4>
+          <div class="stacked-bar-legend">
+            <span><span class="legend-swatch active"></span>Active</span>
+            <span><span class="legend-swatch voluntary"></span>Voluntary Left</span>
+            <span><span class="legend-swatch terminated"></span>Terminated for Cause</span>
+          </div>
+          <div id="sourceChart-composition"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="analytics-card">
-      <h2>Department Overview</h2>
-      <p class="analytics-subtitle">Headcount, retention, performance, and compensation trends by department.</p>
-      <table class="analytics-table">
+    <div class="analytics-card" id="departmentCard">
+      <div class="card-header-row">
+        <div>
+          <h2>Department Overview</h2>
+          <p class="analytics-subtitle">Headcount, retention, performance, and compensation trends by department.</p>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="setDepartmentView('table', this)">Table</button>
+          <button class="view-toggle-btn" onclick="setDepartmentView('chart', this)">Chart</button>
+        </div>
+      </div>
+      <table class="analytics-table" id="departmentTableView">
         <thead>
           <tr>
             <th>Department</th><th>Headcount</th><th>Retention Rate</th><th>Avg Tenure (yrs)</th>
@@ -375,19 +430,56 @@
         </thead>
         <tbody id="departmentStatsBody"></tbody>
       </table>
+      <div id="departmentChartView" style="display:none;">
+        <div class="mini-chart">
+          <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired into each department</span></h4>
+          <div class="stacked-bar-legend">
+            <span><span class="legend-swatch active"></span>Active</span>
+            <span><span class="legend-swatch voluntary"></span>Voluntary Left</span>
+            <span><span class="legend-swatch terminated"></span>Terminated for Cause</span>
+          </div>
+          <div id="deptChart-composition"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="analytics-card">
-      <h2>Retention &amp; Turnover</h2>
-      <p class="analytics-subtitle">The overall status split, and the reasons behind it — use this as the benchmark for judging any department or source.</p>
-      <div class="kpi-row" id="retentionStatusRow"></div>
-      <p class="analytics-subtitle" style="margin-top: 20px;">Top 5 reasons behind voluntary and involuntary departures, company-wide.</p>
-      <table class="analytics-table">
-        <thead>
-          <tr><th>Reason</th><th>% of Departures</th></tr>
-        </thead>
-        <tbody id="turnoverReasonsBody"></tbody>
-      </table>
+    <div class="analytics-card" id="retentionCard">
+      <div class="card-header-row">
+        <div>
+          <h2>Retention &amp; Turnover</h2>
+          <p class="analytics-subtitle">The overall status split, and the reasons behind it — use this as the benchmark for judging any department or source.</p>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="setRetentionView('table', this)">Table</button>
+          <button class="view-toggle-btn" onclick="setRetentionView('chart', this)">Chart</button>
+        </div>
+      </div>
+
+      <div id="retentionTableView">
+        <div class="kpi-row" id="retentionStatusRow"></div>
+        <p class="analytics-subtitle" style="margin-top: 20px;">Top 5 reasons behind voluntary and involuntary departures, company-wide.</p>
+        <table class="analytics-table">
+          <thead>
+            <tr><th>Reason</th><th>% of Departures</th></tr>
+          </thead>
+          <tbody id="turnoverReasonsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="retentionChartView" style="display:none;">
+        <div class="donut-row">
+          <div class="donut-block">
+            <h4 style="text-align:center;">Employment Status</h4>
+            <div class="donut-chart" id="retentionDonut"></div>
+            <div class="donut-legend" id="retentionDonutLegend"></div>
+          </div>
+          <div class="donut-block">
+            <h4 style="text-align:center;">Top Departure Reasons</h4>
+            <div class="donut-chart" id="turnoverDonut"></div>
+            <div class="donut-legend" id="turnoverDonutLegend"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -778,6 +870,102 @@
         </tr>`).join("");
     }
 
+    // One stacked bar per row: Active / Voluntary Left / Terminated for Cause, as % of that row's total.
+    function renderStackedBars(elementId, rows) {
+      document.getElementById(elementId).innerHTML = rows.map(r => {
+        const activePct = (r.active / r.total) * 100;
+        const voluntaryPct = (r.voluntaryLeft / r.total) * 100;
+        const terminatedPct = (r.terminatedCause / r.total) * 100;
+        return `
+        <div class="stacked-bar-row">
+          <div class="stacked-bar-label"><span>${r.name}</span><span>${activePct.toFixed(0)}% Active</span></div>
+          <div class="stacked-bar-track">
+            <div class="stacked-bar-segment active" style="width: ${activePct}%;" title="Active: ${r.active}"></div>
+            <div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"></div>
+            <div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"></div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderSourceChart() {
+      const stats = getSourceStats();
+      renderStackedBars("sourceChart-composition", stats.map(s => ({
+        name: s.source, total: s.hired, active: s.active, voluntaryLeft: s.voluntaryLeft, terminatedCause: s.terminatedCause
+      })).sort((a, b) => (b.active / b.total) - (a.active / a.total)));
+    }
+
+    function renderDepartmentChart() {
+      const stats = getDepartmentStats();
+      renderStackedBars("deptChart-composition", stats.map(d => {
+        const group = employees.filter(e => e.department === d.department);
+        return {
+          name: d.department,
+          total: d.headcount,
+          active: group.filter(e => e.employmentStatus === "Active").length,
+          voluntaryLeft: group.filter(e => e.employmentStatus === "Voluntarily Terminated").length,
+          terminatedCause: group.filter(e => e.employmentStatus === "Terminated for Cause").length
+        };
+      }).sort((a, b) => (b.active / b.total) - (a.active / a.total)));
+    }
+
+    // Simple CSS conic-gradient donut chart. slices: [{label, value, color}]
+    function renderDonut(chartElementId, legendElementId, slices) {
+      const total = slices.reduce((sum, s) => sum + s.value, 0);
+      let cumulative = 0;
+      const gradientParts = slices.map(s => {
+        const start = (cumulative / total) * 360;
+        cumulative += s.value;
+        const end = (cumulative / total) * 360;
+        return `${s.color} ${start}deg ${end}deg`;
+      });
+      document.getElementById(chartElementId).style.background = `conic-gradient(${gradientParts.join(", ")})`;
+      document.getElementById(legendElementId).innerHTML = slices.map(s => `
+        <div><span class="legend-swatch" style="background:${s.color};"></span>${s.label} — ${((s.value / total) * 100).toFixed(0)}%</div>
+      `).join("");
+    }
+
+    function renderRetentionDonut() {
+      const r = getRetentionSummary();
+      renderDonut("retentionDonut", "retentionDonutLegend", [
+        { label: "Active", value: r.active, color: "#27ae60" },
+        { label: "Voluntary Left", value: r.voluntaryLeft, color: "#f39c12" },
+        { label: "Terminated for Cause", value: r.terminatedCause, color: "#e74c3c" }
+      ]);
+    }
+
+    function renderTurnoverDonut() {
+      const reasons = getTurnoverReasons();
+      const palette = ["#6c5ce7", "#4a90e2", "#f39c12", "#27ae60", "#e74c3c"];
+      renderDonut("turnoverDonut", "turnoverDonutLegend", reasons.map((r, i) => ({
+        label: r.reason, value: r.count, color: palette[i % palette.length]
+      })));
+    }
+
+    function setSourceView(view, btn) {
+      document.querySelectorAll("#sourceCard .view-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("sourceTableView").style.display = view === "table" ? "table" : "none";
+      document.getElementById("sourceChartView").style.display = view === "chart" ? "block" : "none";
+      if (view === "chart") { renderSourceChart(); }
+    }
+
+    function setDepartmentView(view, btn) {
+      document.querySelectorAll("#departmentCard .view-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("departmentTableView").style.display = view === "table" ? "table" : "none";
+      document.getElementById("departmentChartView").style.display = view === "chart" ? "block" : "none";
+      if (view === "chart") { renderDepartmentChart(); }
+    }
+
+    function setRetentionView(view, btn) {
+      document.querySelectorAll("#retentionCard .view-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("retentionTableView").style.display = view === "table" ? "block" : "none";
+      document.getElementById("retentionChartView").style.display = view === "chart" ? "block" : "none";
+      if (view === "chart") { renderRetentionDonut(); renderTurnoverDonut(); }
+    }
+
     function getRetentionSummary() {
       const total = employees.length;
       const active = employees.filter(e => e.employmentStatus === "Active").length;
@@ -880,6 +1068,8 @@
     renderRetentionSummary();
     renderTurnoverReasons();
     renderAnalyticsKpis();
+    renderRetentionDonut();
+    renderTurnoverDonut();
   </script>
 </body>
 </html>
