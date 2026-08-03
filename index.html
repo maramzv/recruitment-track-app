@@ -392,9 +392,13 @@
     <p class="kpi-group-label">Benchmarks</p>
     <div class="kpi-row" id="kpiRowTrends"></div>
 
-    <p class="kpi-group-label">Top Performing vs. Lowest Retention Areas</p>
+    <p class="kpi-group-label">Retention Comparison</p>
     <p class="analytics-subtitle">Groups with fewer than 5 hires are excluded to avoid small-sample bias. Full numbers are in the tables below.</p>
     <div class="kpi-row" id="kpiRowComparison"></div>
+
+    <p class="kpi-group-label">Performance Comparison</p>
+    <p class="analytics-subtitle">Ranked by manager-rated performance score, not retention. Groups with fewer than 5 hires are excluded.</p>
+    <div class="kpi-row" id="kpiRowPerformanceComparison"></div>
 
     <div class="analytics-card" id="sourceCard">
       <div class="card-header-row">
@@ -1451,18 +1455,32 @@
 
       const MIN_SAMPLE_SIZE = 5;
 
+      // Picks the extreme (highest/lowest) group(s) for a metric. When multiple groups
+      // are exactly tied at the extreme, all of their names are joined rather than
+      // silently picking whichever sorts first.
+      function pickExtreme(stats, metricFn, nameFn) {
+        const values = stats.map(metricFn);
+        const max = Math.max(...values);
+        const min = Math.min(...values);
+        const join = list => list.map(nameFn).join(", ");
+        return {
+          best: { names: join(stats.filter(s => metricFn(s) === max)), metric: max },
+          worst: { names: join(stats.filter(s => metricFn(s) === min)), metric: min }
+        };
+      }
+
       const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE_SIZE);
-      const worstDept = deptStats.reduce((worst, d) => d.retentionRate < worst.retentionRate ? d : worst);
-      const bestDept = deptStats.reduce((best, d) => d.retentionRate > best.retentionRate ? d : best);
+      const deptRet = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
+      const deptPerf = pickExtreme(deptStats, d => d.avgPerformance, d => d.department);
 
       const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE_SIZE);
       const sourceRate = s => (s.active / s.hired) * 100;
-      const bestSource = sourceStats.reduce((best, s) => sourceRate(s) > sourceRate(best) ? s : best);
-      const worstSource = sourceStats.reduce((worst, s) => sourceRate(s) < sourceRate(worst) ? s : worst);
+      const sourceRet = pickExtreme(sourceStats, sourceRate, s => s.source);
+      const sourcePerf = pickExtreme(sourceStats, s => s.avgPerformance, s => s.source);
 
       const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE_SIZE);
-      const worstTeam = teamStats.reduce((worst, t) => t.retentionRate < worst.retentionRate ? t : worst);
-      const bestTeam = teamStats.reduce((best, t) => t.retentionRate > best.retentionRate ? t : best);
+      const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
+      const teamPerf = pickExtreme(teamStats, t => t.avgPerformance, t => t.managerName);
 
       const avgTenure = average(employees.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination)));
       const topReason = getTurnoverReasons()[0];
@@ -1481,12 +1499,21 @@
       ]);
 
       renderKpiRow("kpiRowComparison", [
-        { label: "Top Performing Dept.", value: bestDept.department, sub: `${bestDept.retentionRate.toFixed(0)}% retention` },
-        { label: "Top Performing Source", value: bestSource.source, sub: `${sourceRate(bestSource).toFixed(0)}% retention` },
-        { label: "Top Performing Manager", value: bestTeam.managerName, sub: `${bestTeam.retentionRate.toFixed(0)}% retention` },
-        { label: "Lowest Retention Dept.", value: worstDept.department, sub: `${worstDept.retentionRate.toFixed(0)}% retention` },
-        { label: "Lowest Retention Source", value: worstSource.source, sub: `${sourceRate(worstSource).toFixed(0)}% retention` },
-        { label: "Lowest Retention Manager", value: worstTeam.managerName, sub: `${worstTeam.retentionRate.toFixed(0)}% retention` }
+        { label: "Strongest Dept.", value: deptRet.best.names, sub: `${deptRet.best.metric.toFixed(0)}% retention` },
+        { label: "Strongest Source", value: sourceRet.best.names, sub: `${sourceRet.best.metric.toFixed(0)}% retention` },
+        { label: "Strongest Manager", value: teamRet.best.names, sub: `${teamRet.best.metric.toFixed(0)}% retention` },
+        { label: "Weakest Dept.", value: deptRet.worst.names, sub: `${deptRet.worst.metric.toFixed(0)}% retention` },
+        { label: "Weakest Source", value: sourceRet.worst.names, sub: `${sourceRet.worst.metric.toFixed(0)}% retention` },
+        { label: "Weakest Manager", value: teamRet.worst.names, sub: `${teamRet.worst.metric.toFixed(0)}% retention` }
+      ]);
+
+      renderKpiRow("kpiRowPerformanceComparison", [
+        { label: "Top Dept.", value: deptPerf.best.names, sub: `${deptPerf.best.metric.toFixed(1)} / 4 performance` },
+        { label: "Top Source", value: sourcePerf.best.names, sub: `${sourcePerf.best.metric.toFixed(1)} / 4 performance` },
+        { label: "Top Manager", value: teamPerf.best.names, sub: `${teamPerf.best.metric.toFixed(1)} / 4 performance` },
+        { label: "Bottom Dept.", value: deptPerf.worst.names, sub: `${deptPerf.worst.metric.toFixed(1)} / 4 performance` },
+        { label: "Bottom Source", value: sourcePerf.worst.names, sub: `${sourcePerf.worst.metric.toFixed(1)} / 4 performance` },
+        { label: "Bottom Manager", value: teamPerf.worst.names, sub: `${teamPerf.worst.metric.toFixed(1)} / 4 performance` }
       ]);
 
       renderKpiRow("kpiRowTrends", [
