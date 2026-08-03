@@ -88,6 +88,9 @@
     .analytics-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .analytics-table th, .analytics-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
     .analytics-table th { background: #f0f0f0; color: #333; }
+    .analytics-table th.sortable-th { cursor: pointer; user-select: none; }
+    .analytics-table th.sortable-th:hover { background: #e2e2e2; }
+    .table-sort-arrow { display: inline-block; width: 12px; font-size: 11px; }
     .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; }
     .view-toggle { display: flex; gap: 0; flex-shrink: 0; }
     .view-toggle-btn { padding: 6px 14px; background: white; color: #4a90e2; border: 1px solid #4a90e2; cursor: pointer; font-size: 12px; }
@@ -405,8 +408,15 @@
       <table class="analytics-table" id="sourceTableView">
         <thead>
           <tr>
-            <th>Source</th><th>Hired</th><th>Active</th><th>Voluntary Left</th><th>Terminated (Cause)</th>
-            <th>Avg Tenure (yrs)</th><th>Avg Performance</th><th>Avg Engagement</th><th>Avg Satisfaction</th>
+            <th class="sortable-th" onclick="sortSourceTable('source')">Source<span class="table-sort-arrow" id="srcArrow-source"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('hired')">Hired<span class="table-sort-arrow" id="srcArrow-hired"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('active')">Active<span class="table-sort-arrow" id="srcArrow-active"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('voluntaryLeft')">Voluntary Left<span class="table-sort-arrow" id="srcArrow-voluntaryLeft"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('terminatedCause')">Terminated (Cause)<span class="table-sort-arrow" id="srcArrow-terminatedCause"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('avgTenure')">Avg Tenure (yrs)<span class="table-sort-arrow" id="srcArrow-avgTenure"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('avgPerformance')">Avg Performance<span class="table-sort-arrow" id="srcArrow-avgPerformance"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('avgEngagement')">Avg Engagement<span class="table-sort-arrow" id="srcArrow-avgEngagement"></span></th>
+            <th class="sortable-th" onclick="sortSourceTable('avgSatisfaction')">Avg Satisfaction<span class="table-sort-arrow" id="srcArrow-avgSatisfaction"></span></th>
           </tr>
         </thead>
         <tbody id="sourceStatsBody"></tbody>
@@ -448,8 +458,15 @@
       <table class="analytics-table" id="departmentTableView">
         <thead>
           <tr>
-            <th>Department</th><th>Headcount</th><th>Retention Rate</th><th>Avg Tenure (yrs)</th>
-            <th>Avg Performance</th><th>Avg Engagement</th><th>Avg Satisfaction</th><th>Avg Salary</th><th>Top Turnover Reason</th>
+            <th class="sortable-th" onclick="sortDepartmentTable('department')">Department<span class="table-sort-arrow" id="deptArrow-department"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('headcount')">Headcount<span class="table-sort-arrow" id="deptArrow-headcount"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('retentionRate')">Retention Rate<span class="table-sort-arrow" id="deptArrow-retentionRate"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('avgTenure')">Avg Tenure (yrs)<span class="table-sort-arrow" id="deptArrow-avgTenure"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('avgPerformance')">Avg Performance<span class="table-sort-arrow" id="deptArrow-avgPerformance"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('avgEngagement')">Avg Engagement<span class="table-sort-arrow" id="deptArrow-avgEngagement"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('avgSatisfaction')">Avg Satisfaction<span class="table-sort-arrow" id="deptArrow-avgSatisfaction"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('avgSalary')">Avg Salary<span class="table-sort-arrow" id="deptArrow-avgSalary"></span></th>
+            <th class="sortable-th" onclick="sortDepartmentTable('topTurnoverReason')">Top Turnover Reason<span class="table-sort-arrow" id="deptArrow-topTurnoverReason"></span></th>
           </tr>
         </thead>
         <tbody id="departmentStatsBody"></tbody>
@@ -491,8 +508,14 @@
       <table class="analytics-table" id="teamTableView">
         <thead>
           <tr>
-            <th>Manager</th><th>Department(s)</th><th>Headcount</th><th>Retention Rate</th><th>Avg Tenure (yrs)</th>
-            <th>Avg Performance</th><th>Avg Satisfaction</th><th>Top Turnover Reason</th>
+            <th class="sortable-th" onclick="sortTeamTable('managerName')">Manager<span class="table-sort-arrow" id="teamArrow-managerName"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('departments')">Department(s)<span class="table-sort-arrow" id="teamArrow-departments"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('headcount')">Headcount<span class="table-sort-arrow" id="teamArrow-headcount"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('retentionRate')">Retention Rate<span class="table-sort-arrow" id="teamArrow-retentionRate"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('avgTenure')">Avg Tenure (yrs)<span class="table-sort-arrow" id="teamArrow-avgTenure"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('avgPerformance')">Avg Performance<span class="table-sort-arrow" id="teamArrow-avgPerformance"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('avgSatisfaction')">Avg Satisfaction<span class="table-sort-arrow" id="teamArrow-avgSatisfaction"></span></th>
+            <th class="sortable-th" onclick="sortTeamTable('topTurnoverReason')">Top Turnover Reason<span class="table-sort-arrow" id="teamArrow-topTurnoverReason"></span></th>
           </tr>
         </thead>
         <tbody id="teamStatsBody"></tbody>
@@ -575,7 +598,12 @@
         <table class="analytics-table">
           <thead>
             <tr>
-              <th>Department</th><th>Headcount</th><th>Avg Salary</th><th>Min Salary</th><th>Max Salary</th><th>Avg Performance</th>
+              <th class="sortable-th" onclick="sortSalaryTable('department')">Department<span class="table-sort-arrow" id="salArrow-department"></span></th>
+              <th class="sortable-th" onclick="sortSalaryTable('headcount')">Headcount<span class="table-sort-arrow" id="salArrow-headcount"></span></th>
+              <th class="sortable-th" onclick="sortSalaryTable('avgSalary')">Avg Salary<span class="table-sort-arrow" id="salArrow-avgSalary"></span></th>
+              <th class="sortable-th" onclick="sortSalaryTable('minSalary')">Min Salary<span class="table-sort-arrow" id="salArrow-minSalary"></span></th>
+              <th class="sortable-th" onclick="sortSalaryTable('maxSalary')">Max Salary<span class="table-sort-arrow" id="salArrow-maxSalary"></span></th>
+              <th class="sortable-th" onclick="sortSalaryTable('avgPerformance')">Avg Performance<span class="table-sort-arrow" id="salArrow-avgPerformance"></span></th>
             </tr>
           </thead>
           <tbody id="salaryStatsBody"></tbody>
@@ -584,7 +612,13 @@
         <p class="analytics-subtitle" style="margin-top: 20px;">Top Current Paid Positions — highest average salary among currently active employees.</p>
         <table class="analytics-table">
           <thead>
-            <tr><th>#</th><th>Position</th><th>Department(s)</th><th>Held By</th><th>Salary</th></tr>
+            <tr>
+              <th>#</th>
+              <th class="sortable-th" onclick="sortTopPaidTable('position')">Position<span class="table-sort-arrow" id="paidArrow-position"></span></th>
+              <th class="sortable-th" onclick="sortTopPaidTable('departments')">Department(s)<span class="table-sort-arrow" id="paidArrow-departments"></span></th>
+              <th class="sortable-th" onclick="sortTopPaidTable('names')">Held By<span class="table-sort-arrow" id="paidArrow-names"></span></th>
+              <th class="sortable-th" onclick="sortTopPaidTable('avgSalary')">Salary<span class="table-sort-arrow" id="paidArrow-avgSalary"></span></th>
+            </tr>
           </thead>
           <tbody id="topPaidPositionsBody"></tbody>
         </table>
@@ -918,6 +952,46 @@
       return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
     }
 
+    // Reusable table-header sorting: click toggles ▲/▼, default direction depends on data type
+    // (A-Z for text columns, highest-first for numbers).
+    const tableSortState = {};
+
+    function sortTableColumn(tableKey, field, arrowPrefix, allFields, rows, rerenderFn) {
+      if (!tableSortState[tableKey]) tableSortState[tableKey] = { field: null, direction: "asc" };
+      const state = tableSortState[tableKey];
+      if (state.field === field) {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.field = field;
+        const sampleValue = rows[0] ? rows[0][field] : null;
+        state.direction = typeof sampleValue === "string" ? "asc" : "desc";
+      }
+      allFields.forEach(f => {
+        const el = document.getElementById(`${arrowPrefix}-${f}`);
+        if (el) el.textContent = f === field ? (state.direction === "asc" ? "▲" : "▼") : "";
+      });
+      rerenderFn();
+    }
+
+    function getSortedRows(tableKey, rows) {
+      const state = tableSortState[tableKey];
+      if (!state || !state.field) return rows;
+      const sorted = [...rows].sort((a, b) => {
+        const valA = a[state.field], valB = b[state.field];
+        return typeof valA === "string" ? valA.localeCompare(valB) : valA - valB;
+      });
+      return state.direction === "asc" ? sorted : sorted.reverse();
+    }
+
+    // Sets the starting sort/arrow for a table before its first render.
+    function initTableSort(tableKey, field, direction, arrowPrefix, allFields) {
+      tableSortState[tableKey] = { field, direction };
+      allFields.forEach(f => {
+        const el = document.getElementById(`${arrowPrefix}-${f}`);
+        if (el) el.textContent = f === field ? (direction === "asc" ? "▲" : "▼") : "";
+      });
+    }
+
     function getSourceStats() {
       const sources = [...new Set(employees.map(e => e.recruitmentSource))].sort();
       return sources.map(source => {
@@ -939,8 +1013,14 @@
       });
     }
 
+    const SOURCE_TABLE_FIELDS = ["source", "hired", "active", "voluntaryLeft", "terminatedCause", "avgTenure", "avgPerformance", "avgEngagement", "avgSatisfaction"];
+
+    function sortSourceTable(field) {
+      sortTableColumn("source", field, "srcArrow", SOURCE_TABLE_FIELDS, getSourceStats(), renderSourceStats);
+    }
+
     function renderSourceStats() {
-      const stats = getSourceStats();
+      const stats = getSortedRows("source", getSourceStats());
       document.getElementById("sourceStatsBody").innerHTML = stats.map(s => `
         <tr>
           <td>${s.source}</td>
@@ -985,8 +1065,14 @@
       });
     }
 
+    const DEPARTMENT_TABLE_FIELDS = ["department", "headcount", "retentionRate", "avgTenure", "avgPerformance", "avgEngagement", "avgSatisfaction", "avgSalary", "topTurnoverReason"];
+
+    function sortDepartmentTable(field) {
+      sortTableColumn("department", field, "deptArrow", DEPARTMENT_TABLE_FIELDS, getDepartmentStats(), renderDepartmentStats);
+    }
+
     function renderDepartmentStats() {
-      const stats = getDepartmentStats();
+      const stats = getSortedRows("department", getDepartmentStats());
       document.getElementById("departmentStatsBody").innerHTML = stats.map(d => `
         <tr>
           <td>${d.department}</td>
@@ -1024,8 +1110,14 @@
       });
     }
 
+    const TEAM_TABLE_FIELDS = ["managerName", "departments", "headcount", "retentionRate", "avgTenure", "avgPerformance", "avgSatisfaction", "topTurnoverReason"];
+
+    function sortTeamTable(field) {
+      sortTableColumn("team", field, "teamArrow", TEAM_TABLE_FIELDS, getTeamStats(), renderTeamStats);
+    }
+
     function renderTeamStats() {
-      const stats = getTeamStats();
+      const stats = getSortedRows("team", getTeamStats());
       document.getElementById("teamStatsBody").innerHTML = stats.map(t => `
         <tr>
           <td>${t.managerName}</td>
@@ -1202,8 +1294,14 @@
       });
     }
 
+    const SALARY_TABLE_FIELDS = ["department", "headcount", "avgSalary", "minSalary", "maxSalary", "avgPerformance"];
+
+    function sortSalaryTable(field) {
+      sortTableColumn("salary", field, "salArrow", SALARY_TABLE_FIELDS, getSalaryByDepartment(), renderSalaryStats);
+    }
+
     function renderSalaryStats() {
-      const stats = getSalaryByDepartment();
+      const stats = getSortedRows("salary", getSalaryByDepartment());
       document.getElementById("salaryStatsBody").innerHTML = stats.map(d => `
         <tr>
           <td>${d.department}</td>
@@ -1234,14 +1332,21 @@
           headcount: group.length,
           avgSalary: average(group.map(e => e.salary))
         };
-      }).sort((a, b) => b.avgSalary - a.avgSalary).slice(0, limit);
+      }).sort((a, b) => b.avgSalary - a.avgSalary).slice(0, limit)
+        .map((p, i) => ({ ...p, salaryRank: i + 1 }));
+    }
+
+    const TOP_PAID_TABLE_FIELDS = ["position", "departments", "names", "avgSalary"];
+
+    function sortTopPaidTable(field) {
+      sortTableColumn("topPaid", field, "paidArrow", TOP_PAID_TABLE_FIELDS, getTopPaidPositions(10), renderTopPaidPositions);
     }
 
     function renderTopPaidPositions() {
-      const stats = getTopPaidPositions(10);
-      document.getElementById("topPaidPositionsBody").innerHTML = stats.map((p, i) => `
+      const stats = getSortedRows("topPaid", getTopPaidPositions(10));
+      document.getElementById("topPaidPositionsBody").innerHTML = stats.map(p => `
         <tr>
-          <td>${i + 1}</td>
+          <td>${p.salaryRank}</td>
           <td>${p.position}</td>
           <td>${p.departments}</td>
           <td>${p.names}</td>
@@ -1387,15 +1492,20 @@
     document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
     document.getElementById("fu-lastContact").max = new Date().toISOString().split("T")[0];
     renderTable();
+    initTableSort("source", "source", "asc", "srcArrow", SOURCE_TABLE_FIELDS);
     renderSourceStats();
+    initTableSort("department", "department", "asc", "deptArrow", DEPARTMENT_TABLE_FIELDS);
     renderDepartmentStats();
+    initTableSort("team", "managerName", "asc", "teamArrow", TEAM_TABLE_FIELDS);
     renderTeamStats();
     renderRetentionSummary();
     renderTurnoverReasons();
     renderAnalyticsKpis();
     renderRetentionDonut();
     renderTurnoverDonut();
+    initTableSort("salary", "avgSalary", "desc", "salArrow", SALARY_TABLE_FIELDS);
     renderSalaryStats();
+    initTableSort("topPaid", "avgSalary", "desc", "paidArrow", TOP_PAID_TABLE_FIELDS);
     renderTopPaidPositions();
   </script>
 </body>
