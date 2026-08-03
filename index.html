@@ -7,7 +7,7 @@
     body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
     h1 { color: #333; }
     table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: top; }
     th { background: #4a90e2; color: white; }
     .urgent { background: #ffe0e0; }
     .moderate { background: #fff3cd; }
@@ -67,6 +67,16 @@
     .placeholder-box { background: white; padding: 20px; border-radius: 8px; }
     .placeholder-box h2 { color: #333; margin-top: 0; }
     .placeholder-box ul { line-height: 1.8; color: #444; }
+
+    /* Table cell hierarchy (grouped columns) */
+    .cell-primary { font-weight: bold; }
+    .cell-secondary { font-size: 12px; color: #666; }
+    .sort-btn { background: none; border: none; color: white; cursor: pointer; font-size: 11px; padding: 0 0 0 4px; }
+    .sort-btn:hover { background: none; color: #eee; }
+
+    /* Testing-only tools — remove before final build */
+    .dev-tool-btn { padding: 8px 16px; background: white; color: #666; border: 1px dashed #999; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
+    .dev-tool-btn:hover { background: #f0f0f0; }
   </style>
 </head>
 <body>
@@ -132,13 +142,16 @@
   </div>
 
   <div class="tab-panel active" id="tab-pipeline">
+    <!-- Testing-only tool — remove before final build -->
+    <button class="dev-tool-btn" onclick="loadSampleData()">🧪 Load Sample Data (testing only)</button>
+
     <div class="alert-box">
       <h3>🚨 Candidates Needing Follow-Up</h3>
       <div id="alertList"><p>No alerts right now ✅</p></div>
       <p style="font-size: 13px; color: #666; margin-top: 15px;">
         <strong>Status guide:</strong>
         ✅ On Track (0–7 days since contact) &nbsp;|&nbsp;
-        ⚠️ Follow-up Needed (8–14 days) &nbsp;|&nbsp;
+        🟡 Needs Attention (8–14 days) &nbsp;|&nbsp;
         🔴 Overdue (15+ days)
       </p>
     </div>
@@ -171,6 +184,21 @@
         </select>
       </div>
       <div class="form-group">
+        <label>Recruitment Source</label>
+        <select id="source">
+          <option value="">-- Select Source --</option>
+          <option value="LinkedIn">LinkedIn</option>
+          <option value="Indeed">Indeed</option>
+          <option value="Google Search">Google Search</option>
+          <option value="Employee Referral">Employee Referral</option>
+          <option value="Diversity Job Fair">Diversity Job Fair</option>
+          <option value="On-line Web application">On-line Web application</option>
+          <option value="CareerBuilder">CareerBuilder</option>
+          <option value="Website">Website</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Last Contact Date</label>
         <input id="lastContact" type="date" max="">
       </div>
@@ -190,7 +218,15 @@
 
     <table>
       <thead>
-        <tr><th>Name</th><th>Role</th><th>Department</th><th>Stage</th><th>Email</th><th>Phone</th><th>Last Contact</th><th>Status</th><th>Actions</th></tr>
+        <tr>
+          <th>Name <button class="sort-btn" onclick="sortBy('name')">▲▼</button></th>
+          <th>Position / Department <button class="sort-btn" onclick="sortBy('department')">▲▼</button></th>
+          <th>Stage <button class="sort-btn" onclick="sortBy('stage')">▲▼</button></th>
+          <th>Last Contact <button class="sort-btn" onclick="sortBy('lastContact')">▲▼</button></th>
+          <th>Source <button class="sort-btn" onclick="sortBy('source')">▲▼</button></th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
       </thead>
       <tbody id="tableBody"></tbody>
     </table>
@@ -227,6 +263,36 @@
     let deleteIndex = null;
     let editIndex = null;
     let notesIndex = null;
+    let sortField = null;
+    let sortDirection = "asc";
+    const STAGE_ORDER = ["Applied", "Screening", "Interview 1", "Interview 2", "Offer", "Hired", "Rejected"];
+
+    // Testing-only sample data — remove before final build
+    const SAMPLE_CANDIDATES = [
+      { name: "Sarah Jones", role: "Software Engineer", department: "IT", stage: "Interview 2", email: "sarah.jones@email.com", phone: "555-201-3344", source: "LinkedIn", lastContact: "2026-07-20", notes: "Strong technical interview, waiting on manager feedback." },
+      { name: "Marcus Lee", role: "Sales Manager", department: "Sales", stage: "Screening", email: "marcus.lee@email.com", phone: "555-330-8821", source: "Employee Referral", lastContact: "2026-07-30", notes: "" },
+      { name: "Priya Kapoor", role: "Financial Analyst", department: "Finance", stage: "Offer", email: "priya.kapoor@email.com", phone: "555-118-4420", source: "Indeed", lastContact: "2026-07-10", notes: "Offer sent, awaiting response." },
+      { name: "Devon Carter", role: "Operations Coordinator", department: "Operations", stage: "Applied", email: "devon.carter@email.com", phone: "555-902-1123", source: "CareerBuilder", lastContact: "2026-08-01", notes: "" },
+      { name: "Alicia Nguyen", role: "IT Support Specialist", department: "IT", stage: "Interview 1", email: "alicia.nguyen@email.com", phone: "555-475-9002", source: "Website", lastContact: "2026-07-15", notes: "Requested to reschedule first interview." },
+      { name: "Ben Turner", role: "Account Executive", department: "Sales", stage: "Rejected", email: "ben.turner@email.com", phone: "555-611-7734", source: "Google Search", lastContact: "2026-06-25", notes: "Not a fit for current opening." },
+      { name: "Jean Robles", role: "HR Generalist", department: "Operations", stage: "Screening", email: "jean.robles@email.com", phone: "555-284-6650", source: "Diversity Job Fair", lastContact: "2026-06-30", notes: "" },
+      { name: "Tomas Ruiz", role: "Data Analyst", department: "Finance", stage: "Hired", email: "tomas.ruiz@email.com", phone: "555-559-2201", source: "On-line Web application", lastContact: "2026-07-28", notes: "Accepted offer, starting next month." }
+    ];
+
+    function loadSampleData() {
+      candidates = SAMPLE_CANDIDATES.map(c => ({ ...c }));
+      renderTable();
+    }
+
+    function sortBy(field) {
+      if (sortField === field) {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        sortField = field;
+        sortDirection = "asc";
+      }
+      renderTable();
+    }
 
     function formatContactField(dateStr) {
       const date = new Date(dateStr);
@@ -237,13 +303,15 @@
 
     function renderAlerts(candidateList) {
       const today = new Date();
-      const atRisk = candidateList.filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 8);
+      const atRisk = candidateList
+        .filter(c => Math.floor((today - new Date(c.lastContact)) / 86400000) >= 8)
+        .sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
       const alertList = document.getElementById("alertList");
       if (atRisk.length === 0) { alertList.innerHTML = "<p>No alerts right now ✅</p>"; return; }
       alertList.innerHTML = atRisk.map(c => {
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
         const cls = days >= 15 ? "alert-red" : "alert-yellow";
-        const icon = days >= 15 ? "🔴 Overdue" : "⚠️ Follow-up Needed";
+        const icon = days >= 15 ? "🔴 Overdue" : "🟡 Needs Attention";
         return `<div class="alert-item ${cls}">${icon} — <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
       }).join("");
     }
@@ -306,6 +374,7 @@
       document.getElementById("lastContact").value = c.lastContact;
       document.getElementById("email").value = c.email;
       document.getElementById("phone").value = c.phone;
+      document.getElementById("source").value = c.source || "";
       document.getElementById("formTitle").textContent = "✏️ Edit Candidate";
       document.getElementById("addBtn").style.display = "none";
       document.getElementById("updateBtn").style.display = "inline-block";
@@ -317,6 +386,7 @@
       editIndex = null;
       ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("stage").value = "";
+      document.getElementById("source").value = "";
       document.getElementById("formTitle").textContent = "Add Candidate";
       document.getElementById("addBtn").style.display = "inline-block";
       document.getElementById("updateBtn").style.display = "none";
@@ -330,41 +400,68 @@
       const stage = document.getElementById("stage").value;
       const email = document.getElementById("email").value;
       const phone = document.getElementById("phone").value;
+      const source = document.getElementById("source").value;
       const lastContact = document.getElementById("lastContact").value;
       if (!name || !lastContact) { alert("Name and Last Contact Date are required!"); return; }
       const todayStr = new Date().toISOString().split("T")[0];
       if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
 
       if (editIndex !== null) {
-        candidates[editIndex] = { name, role, department, stage, email, phone, lastContact };
+        candidates[editIndex] = { name, role, department, stage, email, phone, source, lastContact, notes: candidates[editIndex].notes };
         editIndex = null;
         document.getElementById("formTitle").textContent = "Add Candidate";
         document.getElementById("addBtn").style.display = "inline-block";
         document.getElementById("updateBtn").style.display = "none";
         document.getElementById("cancelBtn").style.display = "none";
       } else {
-        candidates.push({ name, role, department, stage, email, phone, lastContact });
+        candidates.push({ name, role, department, stage, email, phone, source, lastContact });
       }
 
       // Clear form
       ["name","role","department","email","phone","lastContact"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("stage").value = "";
+      document.getElementById("source").value = "";
       renderTable();
     }
 
     function renderTable() {
-      candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
+      if (sortField === null) {
+        candidates.sort((a, b) => new Date(a.lastContact) - new Date(b.lastContact));
+      } else {
+        candidates.sort((a, b) => {
+          let result;
+          if (sortField === "lastContact") {
+            result = new Date(a.lastContact) - new Date(b.lastContact);
+          } else if (sortField === "stage") {
+            result = STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage);
+          } else {
+            result = (a[sortField] || "").localeCompare(b[sortField] || "");
+          }
+          return sortDirection === "asc" ? result : -result;
+        });
+      }
+
       document.getElementById("tableBody").innerHTML = "";
       candidates.forEach((c, index) => {
         const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
         let urgencyClass = "good", urgencyLabel = "✅ On Track";
         if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "🔴 Overdue"; }
-        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "⚠️ Follow-up Needed"; }
+        else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "🟡 Needs Attention"; }
         const notesBtnClass = c.notes ? "notes-btn has-notes" : "notes-btn";
         document.getElementById("tableBody").innerHTML += `
           <tr class="${urgencyClass}">
-            <td>${c.name}</td><td>${c.role}</td><td>${c.department || "—"}</td><td>${c.stage || "—"}</td><td>${c.email}</td><td>${c.phone || "—"}</td>
+            <td>
+              <div class="cell-primary">${c.name}</div>
+              <div class="cell-secondary">${c.email}</div>
+              <div class="cell-secondary">${c.phone || "—"}</div>
+            </td>
+            <td>
+              <div class="cell-primary">${c.role || "—"}</div>
+              <div class="cell-secondary">${c.department || "—"}</div>
+            </td>
+            <td>${c.stage || "—"}</td>
             <td>${formatContactField(c.lastContact)}</td>
+            <td>${c.source || "—"}</td>
             <td>${urgencyLabel}</td>
             <td>
               <button class="${notesBtnClass}" onclick="openNotesModal(${index})">📝 Notes</button>
