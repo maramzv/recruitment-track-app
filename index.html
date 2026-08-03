@@ -557,12 +557,12 @@
           <p class="analytics-subtitle">The company-wide status split and top reasons for departure. Use this to understand overall retention patterns.</p>
         </div>
         <div class="view-toggle">
-          <button class="view-toggle-btn active" onclick="setRetentionView('table', this)">Table</button>
-          <button class="view-toggle-btn" onclick="setRetentionView('chart', this)">Chart</button>
+          <button class="view-toggle-btn" onclick="setRetentionView('table', this)">Table</button>
+          <button class="view-toggle-btn active" onclick="setRetentionView('chart', this)">Chart</button>
         </div>
       </div>
 
-      <div id="retentionTableView">
+      <div id="retentionTableView" style="display:none;">
         <div class="kpi-row" id="retentionStatusRow"></div>
         <p class="analytics-subtitle" style="margin-top: 20px;">Top 5 reasons behind voluntary and involuntary departures, company-wide.</p>
         <table class="analytics-table">
@@ -573,7 +573,7 @@
         </table>
       </div>
 
-      <div id="retentionChartView" style="display:none;">
+      <div id="retentionChartView">
         <div class="donut-row">
           <div class="donut-block">
             <h4 style="text-align:center;">Employment Status</h4>
