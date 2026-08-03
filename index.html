@@ -401,11 +401,11 @@
           <p class="analytics-subtitle">How each recruiting channel has historically performed on retention, tenure, and quality of hire.</p>
         </div>
         <div class="view-toggle">
-          <button class="view-toggle-btn active" onclick="setSourceView('table', this)">Table</button>
-          <button class="view-toggle-btn" onclick="setSourceView('chart', this)">Chart</button>
+          <button class="view-toggle-btn" onclick="setSourceView('table', this)">Table</button>
+          <button class="view-toggle-btn active" onclick="setSourceView('chart', this)">Chart</button>
         </div>
       </div>
-      <table class="analytics-table" id="sourceTableView">
+      <table class="analytics-table" id="sourceTableView" style="display:none;">
         <thead>
           <tr>
             <th class="sortable-th" onclick="sortSourceTable('source')">Source<span class="table-sort-arrow" id="srcArrow-source"></span></th>
@@ -421,7 +421,7 @@
         </thead>
         <tbody id="sourceStatsBody"></tbody>
       </table>
-      <div id="sourceChartView" style="display:none;">
+      <div id="sourceChartView">
         <div class="mini-chart">
           <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired through each source</span></h4>
           <div class="chart-sort-row">
@@ -451,11 +451,11 @@
           <p class="analytics-subtitle">Headcount, retention, performance, and compensation trends by department.</p>
         </div>
         <div class="view-toggle">
-          <button class="view-toggle-btn active" onclick="setDepartmentView('table', this)">Table</button>
-          <button class="view-toggle-btn" onclick="setDepartmentView('chart', this)">Chart</button>
+          <button class="view-toggle-btn" onclick="setDepartmentView('table', this)">Table</button>
+          <button class="view-toggle-btn active" onclick="setDepartmentView('chart', this)">Chart</button>
         </div>
       </div>
-      <table class="analytics-table" id="departmentTableView">
+      <table class="analytics-table" id="departmentTableView" style="display:none;">
         <thead>
           <tr>
             <th class="sortable-th" onclick="sortDepartmentTable('department')">Department<span class="table-sort-arrow" id="deptArrow-department"></span></th>
@@ -471,7 +471,7 @@
         </thead>
         <tbody id="departmentStatsBody"></tbody>
       </table>
-      <div id="departmentChartView" style="display:none;">
+      <div id="departmentChartView">
         <div class="mini-chart">
           <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired into each department</span></h4>
           <div class="chart-sort-row">
@@ -589,12 +589,12 @@
           <p class="analytics-subtitle">Historical compensation by department — use as a reference point for offer conversations.</p>
         </div>
         <div class="view-toggle">
-          <button class="view-toggle-btn active" onclick="setSalaryView('table', this)">Table</button>
-          <button class="view-toggle-btn" onclick="setSalaryView('chart', this)">Chart</button>
+          <button class="view-toggle-btn" onclick="setSalaryView('table', this)">Table</button>
+          <button class="view-toggle-btn active" onclick="setSalaryView('chart', this)">Chart</button>
         </div>
       </div>
 
-      <div id="salaryTableView">
+      <div id="salaryTableView" style="display:none;">
         <table class="analytics-table">
           <thead>
             <tr>
@@ -624,7 +624,7 @@
         </table>
       </div>
 
-      <div id="salaryChartView" style="display:none;">
+      <div id="salaryChartView">
         <div class="mini-chart">
           <h4>Salary Range by Department <span class="mini-chart-desc">— min, average, and max historical salary</span></h4>
           <div class="chart-sort-row">
@@ -1499,8 +1499,10 @@
     renderTable();
     initTableSort("source", "source", "asc", "srcArrow", SOURCE_TABLE_FIELDS);
     renderSourceStats();
+    renderSourceChart();
     initTableSort("department", "department", "asc", "deptArrow", DEPARTMENT_TABLE_FIELDS);
     renderDepartmentStats();
+    renderDepartmentChart();
     initTableSort("team", "managerName", "asc", "teamArrow", TEAM_TABLE_FIELDS);
     renderTeamStats();
     renderRetentionSummary();
@@ -1510,6 +1512,7 @@
     renderTurnoverDonut();
     initTableSort("salary", "avgSalary", "desc", "salArrow", SALARY_TABLE_FIELDS);
     renderSalaryStats();
+    renderSalaryRangeChart();
     initTableSort("topPaid", "avgSalary", "desc", "paidArrow", TOP_PAID_TABLE_FIELDS);
     renderTopPaidPositions();
   </script>
