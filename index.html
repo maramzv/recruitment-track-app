@@ -75,6 +75,20 @@
     .placeholder-box h2 { color: #333; margin-top: 0; }
     .placeholder-box ul { line-height: 1.8; color: #444; }
 
+    /* Workforce Analytics */
+    .analytics-card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; overflow-x: auto; }
+    .analytics-card h2 { margin-top: 0; color: #333; font-size: 18px; }
+    .analytics-subtitle { color: #777; font-size: 13px; margin: -6px 0 12px 0; }
+    .kpi-group-label { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0; }
+    .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kpi-tile { background: white; padding: 15px 20px; border-radius: 8px; flex: 1; min-width: 160px; }
+    .kpi-tile .kpi-label { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .kpi-tile .kpi-value { font-size: 22px; font-weight: bold; color: #333; }
+    .kpi-tile .kpi-subvalue { font-size: 12px; color: #888; margin-top: 2px; }
+    .analytics-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .analytics-table th, .analytics-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; }
+    .analytics-table th { background: #f0f0f0; color: #333; }
+
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
     .cell-secondary { font-size: 12px; color: #666; }
@@ -325,16 +339,55 @@
   </div>
 
   <div class="tab-panel" id="tab-analytics">
-    <div class="placeholder-box">
-      <h2>Workforce Analytics (Planned)</h2>
-      <p>Chart-based, concise breakdown of the historical Kaggle workforce dataset — read-only, not part of the live candidate pipeline.</p>
-      <ul>
-        <li>Recruitment source effectiveness</li>
-        <li>Department overview</li>
-        <li>Employee status / retention</li>
-        <li>Performance & satisfaction averages</li>
-        <li>Turnover reasons</li>
-      </ul>
+    <p class="kpi-group-label">Overview</p>
+    <div class="kpi-row" id="kpiRowOverview"></div>
+
+    <p class="kpi-group-label">Needs Attention vs. Top Performing</p>
+    <p class="analytics-subtitle">Departments and sources with fewer than 5 historical hires are excluded from this comparison on purpose — too small a sample to fairly call "best" or "worst." Full numbers for every department and source are still in the tables below.</p>
+    <div class="kpi-row" id="kpiRowComparison"></div>
+
+    <p class="kpi-group-label">Trends</p>
+    <div class="kpi-row" id="kpiRowTrends"></div>
+
+    <div class="analytics-card">
+      <h2>Source Effectiveness</h2>
+      <p class="analytics-subtitle">How each recruiting channel has historically performed on retention, tenure, and quality of hire.</p>
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>Source</th><th>Hired</th><th>Active</th><th>Voluntary Left</th><th>Terminated (Cause)</th>
+            <th>Avg Tenure (yrs)</th><th>Avg Performance</th><th>Avg Engagement</th><th>Avg Satisfaction</th>
+          </tr>
+        </thead>
+        <tbody id="sourceStatsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="analytics-card">
+      <h2>Department Overview</h2>
+      <p class="analytics-subtitle">Headcount, retention, performance, and compensation trends by department.</p>
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>Department</th><th>Headcount</th><th>Retention Rate</th><th>Avg Tenure (yrs)</th>
+            <th>Avg Performance</th><th>Avg Engagement</th><th>Avg Satisfaction</th><th>Avg Salary</th><th>Top Turnover Reason</th>
+          </tr>
+        </thead>
+        <tbody id="departmentStatsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="analytics-card">
+      <h2>Retention &amp; Turnover</h2>
+      <p class="analytics-subtitle">The overall status split, and the reasons behind it — use this as the benchmark for judging any department or source.</p>
+      <div class="kpi-row" id="retentionStatusRow"></div>
+      <p class="analytics-subtitle" style="margin-top: 20px;">Top 5 reasons behind voluntary and involuntary departures, company-wide.</p>
+      <table class="analytics-table">
+        <thead>
+          <tr><th>Reason</th><th>% of Departures</th></tr>
+        </thead>
+        <tbody id="turnoverReasonsBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -631,9 +684,202 @@
       renderAlerts(candidates);
     }
 
+    function getTenureYears(dateOfHire, dateOfTermination) {
+      const start = new Date(dateOfHire);
+      const end = dateOfTermination ? new Date(dateOfTermination) : new Date();
+      return (end - start) / (1000 * 60 * 60 * 24 * 365.25);
+    }
+
+    function average(numbers) {
+      if (numbers.length === 0) return 0;
+      return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
+    }
+
+    function getSourceStats() {
+      const sources = [...new Set(employees.map(e => e.recruitmentSource))].sort();
+      return sources.map(source => {
+        const group = employees.filter(e => e.recruitmentSource === source);
+        const active = group.filter(e => e.employmentStatus === "Active");
+        const voluntaryLeft = group.filter(e => e.employmentStatus === "Voluntarily Terminated");
+        const terminatedCause = group.filter(e => e.employmentStatus === "Terminated for Cause");
+        return {
+          source,
+          hired: group.length,
+          active: active.length,
+          voluntaryLeft: voluntaryLeft.length,
+          terminatedCause: terminatedCause.length,
+          avgTenure: average(group.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination))),
+          avgPerformance: average(group.map(e => e.performanceScoreValue)),
+          avgEngagement: average(group.map(e => e.engagementSurvey)),
+          avgSatisfaction: average(group.map(e => e.empSatisfaction))
+        };
+      });
+    }
+
+    function renderSourceStats() {
+      const stats = getSourceStats();
+      document.getElementById("sourceStatsBody").innerHTML = stats.map(s => `
+        <tr>
+          <td>${s.source}</td>
+          <td>${s.hired}</td>
+          <td>${s.active}</td>
+          <td>${s.voluntaryLeft}</td>
+          <td>${s.terminatedCause}</td>
+          <td>${s.avgTenure.toFixed(1)}</td>
+          <td>${s.avgPerformance.toFixed(1)} / 4</td>
+          <td>${s.avgEngagement.toFixed(2)}</td>
+          <td>${s.avgSatisfaction.toFixed(1)}</td>
+        </tr>`).join("");
+    }
+
+    function getMostCommon(values) {
+      if (values.length === 0) return "—";
+      const counts = {};
+      values.forEach(v => { counts[v] = (counts[v] || 0) + 1; });
+      return Object.keys(counts).reduce((a, b) => (counts[a] >= counts[b] ? a : b));
+    }
+
+    function getDepartmentStats() {
+      const departments = [...new Set(employees.map(e => e.department))].sort();
+      return departments.map(department => {
+        const group = employees.filter(e => e.department === department);
+        const active = group.filter(e => e.employmentStatus === "Active");
+        const left = group.filter(e => e.employmentStatus !== "Active");
+        const leftReasons = left
+          .map(e => e.termReason)
+          .filter(r => r && r !== "N/A-StillEmployed");
+        return {
+          department,
+          headcount: group.length,
+          retentionRate: (active.length / group.length) * 100,
+          avgTenure: average(group.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination))),
+          avgPerformance: average(group.map(e => e.performanceScoreValue)),
+          avgEngagement: average(group.map(e => e.engagementSurvey)),
+          avgSatisfaction: average(group.map(e => e.empSatisfaction)),
+          avgSalary: average(group.map(e => e.salary)),
+          topTurnoverReason: getMostCommon(leftReasons)
+        };
+      });
+    }
+
+    function renderDepartmentStats() {
+      const stats = getDepartmentStats();
+      document.getElementById("departmentStatsBody").innerHTML = stats.map(d => `
+        <tr>
+          <td>${d.department}</td>
+          <td>${d.headcount}</td>
+          <td>${d.retentionRate.toFixed(0)}%</td>
+          <td>${d.avgTenure.toFixed(1)}</td>
+          <td>${d.avgPerformance.toFixed(1)} / 4</td>
+          <td>${d.avgEngagement.toFixed(2)}</td>
+          <td>${d.avgSatisfaction.toFixed(1)}</td>
+          <td>$${Math.round(d.avgSalary).toLocaleString()}</td>
+          <td>${d.topTurnoverReason}</td>
+        </tr>`).join("");
+    }
+
+    function getRetentionSummary() {
+      const total = employees.length;
+      const active = employees.filter(e => e.employmentStatus === "Active").length;
+      const voluntaryLeft = employees.filter(e => e.employmentStatus === "Voluntarily Terminated").length;
+      const terminatedCause = employees.filter(e => e.employmentStatus === "Terminated for Cause").length;
+      return {
+        total,
+        active, voluntaryLeft, terminatedCause,
+        activePct: (active / total) * 100,
+        voluntaryLeftPct: (voluntaryLeft / total) * 100,
+        terminatedCausePct: (terminatedCause / total) * 100
+      };
+    }
+
+    function renderRetentionSummary() {
+      const r = getRetentionSummary();
+      renderKpiRow("retentionStatusRow", [
+        { label: "Active", value: r.active, sub: `${r.activePct.toFixed(0)}% of total` },
+        { label: "Voluntarily Left", value: r.voluntaryLeft, sub: `${r.voluntaryLeftPct.toFixed(0)}% of total` },
+        { label: "Terminated for Cause", value: r.terminatedCause, sub: `${r.terminatedCausePct.toFixed(0)}% of total` }
+      ]);
+    }
+
+    function getTurnoverReasons() {
+      const reasons = employees
+        .map(e => e.termReason)
+        .filter(r => r && r !== "N/A-StillEmployed");
+      const counts = {};
+      reasons.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+      return Object.keys(counts)
+        .map(reason => ({ reason, count: counts[reason], pct: (counts[reason] / reasons.length) * 100 }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    }
+
+    function renderTurnoverReasons() {
+      const stats = getTurnoverReasons();
+      document.getElementById("turnoverReasonsBody").innerHTML = stats.map(t => `
+        <tr>
+          <td>${t.reason}</td>
+          <td>${t.pct.toFixed(0)}%</td>
+        </tr>`).join("");
+    }
+
+    function renderKpiRow(elementId, tiles) {
+      document.getElementById(elementId).innerHTML = tiles.map(t => `
+        <div class="kpi-tile">
+          <div class="kpi-label">${t.label}</div>
+          <div class="kpi-value">${t.value}</div>
+          ${t.sub ? `<div class="kpi-subvalue">${t.sub}</div>` : ""}
+        </div>`).join("");
+    }
+
+    function renderAnalyticsKpis() {
+      const totalEmployees = employees.length;
+      const departmentCount = new Set(employees.map(e => e.department)).size;
+      const sourceCount = new Set(employees.map(e => e.recruitmentSource)).size;
+      const active = employees.filter(e => e.employmentStatus === "Active").length;
+      const activePct = (active / totalEmployees) * 100;
+
+      const MIN_SAMPLE_SIZE = 5;
+
+      const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE_SIZE);
+      const worstDept = deptStats.reduce((worst, d) => d.retentionRate < worst.retentionRate ? d : worst);
+      const bestDept = deptStats.reduce((best, d) => d.retentionRate > best.retentionRate ? d : best);
+
+      const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE_SIZE);
+      const sourceRate = s => (s.active / s.hired) * 100;
+      const bestSource = sourceStats.reduce((best, s) => sourceRate(s) > sourceRate(best) ? s : best);
+      const worstSource = sourceStats.reduce((worst, s) => sourceRate(s) < sourceRate(worst) ? s : worst);
+
+      const avgTenure = average(employees.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination)));
+      const topReason = getTurnoverReasons()[0];
+
+      renderKpiRow("kpiRowOverview", [
+        { label: "Historical Employees", value: totalEmployees },
+        { label: "Departments", value: departmentCount },
+        { label: "Active Employees", value: active, sub: `${activePct.toFixed(0)}% of total` },
+        { label: "Recruiting Sources", value: sourceCount }
+      ]);
+
+      renderKpiRow("kpiRowComparison", [
+        { label: "Dept. Needing Attention", value: worstDept.department, sub: `${worstDept.retentionRate.toFixed(0)}% retention` },
+        { label: "Top Performing Dept.", value: bestDept.department, sub: `${bestDept.retentionRate.toFixed(0)}% retention` },
+        { label: "Source Needing Attention", value: worstSource.source, sub: `${sourceRate(worstSource).toFixed(0)}% retention` },
+        { label: "Top Performing Source", value: bestSource.source, sub: `${sourceRate(bestSource).toFixed(0)}% retention` }
+      ]);
+
+      renderKpiRow("kpiRowTrends", [
+        { label: "Avg Tenure", value: `${avgTenure.toFixed(1)} yrs` },
+        { label: "Top Exit Reason", value: topReason.reason, sub: `${topReason.pct.toFixed(0)}% of departures` }
+      ]);
+    }
+
     document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
     document.getElementById("fu-lastContact").max = new Date().toISOString().split("T")[0];
     renderTable();
+    renderSourceStats();
+    renderDepartmentStats();
+    renderRetentionSummary();
+    renderTurnoverReasons();
+    renderAnalyticsKpis();
   </script>
 </body>
 </html>
