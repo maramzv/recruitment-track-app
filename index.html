@@ -77,6 +77,18 @@
     /* Testing-only tools — remove before final build */
     .dev-tool-btn { padding: 8px 16px; background: white; color: #666; border: 1px dashed #999; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
     .dev-tool-btn:hover { background: #f0f0f0; }
+
+    /* Follow Up modal */
+    .followup-btn { padding: 5px 10px; background: #6c5ce7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+    .followup-btn:hover { background: #5849c2; }
+    .followup-modal .modal { max-width: 480px; text-align: left; }
+    .followup-info { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+    .followup-info p { margin: 4px 0; color: #333; }
+    .followup-insight { background: #f0ebff; border: 1px dashed #6c5ce7; padding: 12px; border-radius: 6px; margin-bottom: 15px; color: #555; font-size: 13px; }
+    .followup-update-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; }
+    .followup-update-box h4 { margin-top: 0; color: #333; }
+    .followup-update-box .form-group { display: block; margin: 10px 0; }
+    .followup-update-box textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial, sans-serif; box-sizing: border-box; }
   </style>
 </head>
 <body>
@@ -117,6 +129,53 @@
       <div class="modal-buttons" style="margin-top: 15px;">
         <button class="keep-btn" onclick="closeNotesModal()">Cancel</button>
         <button class="update-btn" onclick="saveNotes()">Save Notes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Follow Up Modal -->
+  <div class="modal-overlay followup-modal" id="followUpModal">
+    <div class="modal">
+      <h3 style="color: #6c5ce7;">📞 Follow Up</h3>
+
+      <div class="followup-info">
+        <p><strong id="fu-name"></strong> — <span id="fu-role"></span> (<span id="fu-department"></span>)</p>
+        <p>📧 <span id="fu-email"></span></p>
+        <p>📱 <span id="fu-phone"></span></p>
+        <p>Source: <span id="fu-source"></span></p>
+      </div>
+
+      <div class="followup-insight">
+        💡 <strong>Hiring Insight — coming soon.</strong> Once Workforce Analytics and Hiring Intelligence are built, a department/role/source insight for this candidate will show here.
+      </div>
+
+      <div class="followup-update-box">
+        <h4>After you contact them, update:</h4>
+        <div class="form-group">
+          <label>1. Last Contact Date</label>
+          <input id="fu-lastContact" type="date" max="">
+        </div>
+        <div class="form-group">
+          <label>2. Hiring Stage</label>
+          <select id="fu-stage">
+            <option value="Applied">Applied</option>
+            <option value="Screening">Screening</option>
+            <option value="Interview 1">Interview 1</option>
+            <option value="Interview 2">Interview 2</option>
+            <option value="Offer">Offer</option>
+            <option value="Hired">Hired</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>3. Notes</label>
+          <textarea id="fu-notes" rows="3" placeholder="e.g. Left voicemail, said she'd call back Friday"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-buttons" style="margin-top: 15px;">
+        <button class="keep-btn" onclick="closeFollowUpModal()">Cancel</button>
+        <button class="update-btn" onclick="saveFollowUp()">✅ Save Follow-Up</button>
       </div>
     </div>
   </div>
@@ -263,6 +322,7 @@
     let deleteIndex = null;
     let editIndex = null;
     let notesIndex = null;
+    let followUpIndex = null;
     let sortField = null;
     let sortDirection = "asc";
     const STAGE_ORDER = ["Applied", "Screening", "Interview 1", "Interview 2", "Offer", "Hired", "Rejected"];
@@ -312,7 +372,10 @@
         const days = Math.floor((today - new Date(c.lastContact)) / 86400000);
         const cls = days >= 15 ? "alert-red" : "alert-yellow";
         const icon = days >= 15 ? "🔴 Overdue" : "🟡 Needs Attention";
-        return `<div class="alert-item ${cls}">${icon} — <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days</div>`;
+        const index = candidates.indexOf(c);
+        return `<div class="alert-item ${cls}">${icon} — <strong>${c.name}</strong> — ${c.role} — ${c.stage} — No update for ${days} days
+          <button class="followup-btn" onclick="openFollowUpModal(${index})">📞 Follow Up</button>
+        </div>`;
       }).join("");
     }
 
@@ -346,6 +409,39 @@
     function closeNotesModal() {
       notesIndex = null;
       document.getElementById("notesModal").classList.remove("active");
+    }
+
+    function openFollowUpModal(index) {
+      followUpIndex = index;
+      const c = candidates[index];
+      document.getElementById("fu-name").textContent = c.name;
+      document.getElementById("fu-role").textContent = c.role || "—";
+      document.getElementById("fu-department").textContent = c.department || "—";
+      document.getElementById("fu-email").textContent = c.email || "—";
+      document.getElementById("fu-phone").textContent = c.phone || "—";
+      document.getElementById("fu-source").textContent = c.source || "—";
+      document.getElementById("fu-lastContact").value = c.lastContact;
+      document.getElementById("fu-stage").value = c.stage || "Applied";
+      document.getElementById("fu-notes").value = c.notes || "";
+      document.getElementById("followUpModal").classList.add("active");
+    }
+
+    function closeFollowUpModal() {
+      followUpIndex = null;
+      document.getElementById("followUpModal").classList.remove("active");
+    }
+
+    function saveFollowUp() {
+      if (followUpIndex !== null) {
+        const lastContact = document.getElementById("fu-lastContact").value;
+        const todayStr = new Date().toISOString().split("T")[0];
+        if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
+        candidates[followUpIndex].lastContact = lastContact;
+        candidates[followUpIndex].stage = document.getElementById("fu-stage").value;
+        candidates[followUpIndex].notes = document.getElementById("fu-notes").value;
+        renderTable();
+      }
+      closeFollowUpModal();
     }
 
     function saveNotes() {
@@ -464,6 +560,7 @@
             <td>${c.source || "—"}</td>
             <td>${urgencyLabel}</td>
             <td>
+              <button class="followup-btn" onclick="openFollowUpModal(${index})">📞 Follow Up</button>
               <button class="${notesBtnClass}" onclick="openNotesModal(${index})">📝 Notes</button>
               <button class="edit-btn" onclick="editCandidate(${index})">✏️ Edit</button>
               <button class="delete-btn" onclick="openModal(${index})">🗑️ Delete</button>
@@ -474,6 +571,7 @@
     }
 
     document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
+    document.getElementById("fu-lastContact").max = new Date().toISOString().split("T")[0];
     renderTable();
   </script>
 </body>
