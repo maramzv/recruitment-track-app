@@ -126,8 +126,7 @@
     .salary-range-legend { display: flex; gap: 15px; margin-bottom: 16px; font-size: 12px; color: #555; flex-wrap: wrap; }
     .salary-range-row { margin-bottom: 22px; }
     .salary-range-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 6px; }
-    .salary-range-values { display: flex; gap: 14px; font-size: 12px; color: #666; margin-top: 6px; }
-    .salary-range-values strong { color: #333; }
+    .salary-range-values { font-size: 11px; color: #888; margin-top: 4px; }
     .salary-range-track { position: relative; height: 14px; background: #f0f0f0; border-radius: 4px; }
     .salary-range-fill { position: absolute; top: 0; height: 100%; background: #d8d1f7; border-radius: 4px; }
     .salary-range-avg-marker { position: absolute; top: -4px; width: 3px; height: 22px; background: #6c5ce7; border-radius: 2px; }
@@ -386,7 +385,7 @@
     <div class="kpi-row" id="kpiRowOverview"></div>
 
     <p class="kpi-group-label">Needs Attention vs. Top Performing</p>
-    <p class="analytics-subtitle">Departments and sources with fewer than 5 historical hires are excluded from this comparison on purpose — too small a sample to fairly call "best" or "worst." Full numbers for every department and source are still in the tables below.</p>
+    <p class="analytics-subtitle">Groups with fewer than 5 hires are excluded to avoid small-sample bias. Full numbers are in the tables below.</p>
     <div class="kpi-row" id="kpiRowComparison"></div>
 
     <p class="kpi-group-label">Trends</p>
@@ -478,6 +477,49 @@
       </div>
     </div>
 
+    <div class="analytics-card" id="teamCard">
+      <div class="card-header-row">
+        <div>
+          <h2>Team Overview</h2>
+          <p class="analytics-subtitle">Same breakdown as Department, grouped by hiring manager instead — useful once a candidate's future manager is known.</p>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="setTeamView('table', this)">Table</button>
+          <button class="view-toggle-btn" onclick="setTeamView('chart', this)">Chart</button>
+        </div>
+      </div>
+      <table class="analytics-table" id="teamTableView">
+        <thead>
+          <tr>
+            <th>Manager</th><th>Department(s)</th><th>Headcount</th><th>Retention Rate</th><th>Avg Tenure (yrs)</th>
+            <th>Avg Performance</th><th>Avg Satisfaction</th><th>Top Turnover Reason</th>
+          </tr>
+        </thead>
+        <tbody id="teamStatsBody"></tbody>
+      </table>
+      <div id="teamChartView" style="display:none;">
+        <div class="mini-chart">
+          <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone on each manager's team</span></h4>
+          <div class="chart-sort-row">
+            <label for="teamSortSelect">Sort by</label>
+            <select id="teamSortSelect" onchange="renderTeamChart()">
+              <option value="active">% Active (highest first)</option>
+              <option value="avgPerformance">Avg Performance</option>
+              <option value="avgTenure">Avg Tenure</option>
+              <option value="avgSatisfaction">Avg Satisfaction</option>
+              <option value="total">Headcount (most first)</option>
+            </select>
+          </div>
+          <div class="stacked-bar-legend">
+            <span><span class="legend-swatch active"></span>Active</span>
+            <span><span class="legend-swatch voluntary"></span>Voluntary Left</span>
+            <span><span class="legend-swatch terminated"></span>Terminated for Cause</span>
+          </div>
+          <div id="teamChart-composition"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="analytics-card" id="retentionCard">
       <div class="card-header-row">
         <div>
@@ -539,10 +581,10 @@
           <tbody id="salaryStatsBody"></tbody>
         </table>
 
-        <p class="analytics-subtitle" style="margin-top: 20px;">Top 10 highest-paid positions, company-wide.</p>
+        <p class="analytics-subtitle" style="margin-top: 20px;">Top Current Paid Positions — highest average salary among currently active employees.</p>
         <table class="analytics-table">
           <thead>
-            <tr><th>Position</th><th>Headcount</th><th>Avg Salary</th></tr>
+            <tr><th>#</th><th>Position</th><th>Department(s)</th><th>Held By</th><th>Salary</th></tr>
           </thead>
           <tbody id="topPaidPositionsBody"></tbody>
         </table>
@@ -551,6 +593,16 @@
       <div id="salaryChartView" style="display:none;">
         <div class="mini-chart">
           <h4>Salary Range by Department <span class="mini-chart-desc">— min, average, and max historical salary</span></h4>
+          <div class="chart-sort-row">
+            <label for="salarySortSelect">Sort by</label>
+            <select id="salarySortSelect" onchange="renderSalaryRangeChart()">
+              <option value="avgSalary">Avg Salary (highest first)</option>
+              <option value="minSalary">Min Salary</option>
+              <option value="maxSalary">Max Salary</option>
+              <option value="headcount">Headcount (most first)</option>
+              <option value="avgPerformance">Avg Performance</option>
+            </select>
+          </div>
           <div class="salary-range-legend">
             <span><span class="legend-swatch" style="background:#f0f0f0; border:1px solid #ddd;"></span>Company-wide salary scale</span>
             <span><span class="legend-swatch" style="background:#d8d1f7;"></span>This department's min–max range</span>
@@ -949,6 +1001,68 @@
         </tr>`).join("");
     }
 
+    function getTeamStats() {
+      const managers = [...new Set(employees.map(e => e.managerName))].sort();
+      return managers.map(managerName => {
+        const group = employees.filter(e => e.managerName === managerName);
+        const active = group.filter(e => e.employmentStatus === "Active");
+        const left = group.filter(e => e.employmentStatus !== "Active");
+        const leftReasons = left
+          .map(e => e.termReason)
+          .filter(r => r && r !== "N/A-StillEmployed");
+        const departments = [...new Set(group.map(e => e.department))].join(", ");
+        return {
+          managerName,
+          departments,
+          headcount: group.length,
+          retentionRate: (active.length / group.length) * 100,
+          avgTenure: average(group.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination))),
+          avgPerformance: average(group.map(e => e.performanceScoreValue)),
+          avgSatisfaction: average(group.map(e => e.empSatisfaction)),
+          topTurnoverReason: getMostCommon(leftReasons)
+        };
+      });
+    }
+
+    function renderTeamStats() {
+      const stats = getTeamStats();
+      document.getElementById("teamStatsBody").innerHTML = stats.map(t => `
+        <tr>
+          <td>${t.managerName}</td>
+          <td>${t.departments}</td>
+          <td>${t.headcount}</td>
+          <td>${t.retentionRate.toFixed(0)}%</td>
+          <td>${t.avgTenure.toFixed(1)}</td>
+          <td>${t.avgPerformance.toFixed(1)} / 4</td>
+          <td>${t.avgSatisfaction.toFixed(1)}</td>
+          <td>${t.topTurnoverReason}</td>
+        </tr>`).join("");
+    }
+
+    function renderTeamChart() {
+      const stats = getTeamStats();
+      const sortField = document.getElementById("teamSortSelect").value;
+      renderStackedBars("teamChart-composition", stats.map(t => {
+        const group = employees.filter(e => e.managerName === t.managerName);
+        return {
+          name: t.managerName,
+          total: t.headcount,
+          active: group.filter(e => e.employmentStatus === "Active").length,
+          voluntaryLeft: group.filter(e => e.employmentStatus === "Voluntarily Terminated").length,
+          terminatedCause: group.filter(e => e.employmentStatus === "Terminated for Cause").length,
+          avgPerformance: t.avgPerformance, avgTenure: t.avgTenure, avgSatisfaction: t.avgSatisfaction
+        };
+      }), "headcount", sortField);
+    }
+
+    function setTeamView(view, btn) {
+      document.querySelectorAll("#teamCard .view-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("teamTableView").style.display = view === "table" ? "table" : "none";
+      document.getElementById("teamChartView").style.display = view === "chart" ? "block" : "none";
+      if (view === "chart") { renderTeamChart(); }
+    }
+
     function highlightIf(value, isHighlighted) {
       return isHighlighted ? `<span class="stacked-bar-stat-highlight">${value}</span>` : value;
     }
@@ -1101,12 +1215,22 @@
         </tr>`).join("");
     }
 
+    // Source data stores names as "Last, First Middle" (from the original CSV) — reformat to "First Middle Last".
+    function formatNameFirstLast(name) {
+      const parts = name.split(",");
+      if (parts.length !== 2) return name;
+      return `${parts[1].trim()} ${parts[0].trim()}`;
+    }
+
     function getTopPaidPositions(limit) {
-      const positions = [...new Set(employees.map(e => e.position))];
+      const activeEmployees = employees.filter(e => e.employmentStatus === "Active");
+      const positions = [...new Set(activeEmployees.map(e => e.position))];
       return positions.map(position => {
-        const group = employees.filter(e => e.position === position);
+        const group = activeEmployees.filter(e => e.position === position);
         return {
           position,
+          departments: [...new Set(group.map(e => e.department))].join(", "),
+          names: group.map(e => formatNameFirstLast(e.employeeName)).join(", "),
           headcount: group.length,
           avgSalary: average(group.map(e => e.salary))
         };
@@ -1115,10 +1239,12 @@
 
     function renderTopPaidPositions() {
       const stats = getTopPaidPositions(10);
-      document.getElementById("topPaidPositionsBody").innerHTML = stats.map(p => `
+      document.getElementById("topPaidPositionsBody").innerHTML = stats.map((p, i) => `
         <tr>
+          <td>${i + 1}</td>
           <td>${p.position}</td>
-          <td>${p.headcount}</td>
+          <td>${p.departments}</td>
+          <td>${p.names}</td>
           <td>$${Math.round(p.avgSalary).toLocaleString()}</td>
         </tr>`).join("");
     }
@@ -1128,22 +1254,25 @@
       const globalMin = Math.min(...stats.map(d => d.minSalary));
       const globalMax = Math.max(...stats.map(d => d.maxSalary));
       const range = globalMax - globalMin;
-      const sorted = [...stats].sort((a, b) => b.avgSalary - a.avgSalary);
-      document.getElementById("salaryRangeChart").innerHTML = sorted.map(d => {
+      const sortField = document.getElementById("salarySortSelect").value;
+      const sorted = [...stats].sort((a, b) => b[sortField] - a[sortField]);
+      document.getElementById("salaryRangeChart").innerHTML = sorted.map((d, i) => {
         const leftPct = ((d.minSalary - globalMin) / range) * 100;
         const widthPct = ((d.maxSalary - d.minSalary) / range) * 100;
         const avgPct = ((d.avgSalary - globalMin) / range) * 100;
         return `
         <div class="salary-range-row">
-          <div class="salary-range-label"><span>${d.department}</span></div>
+          <div class="salary-range-label"><span><span class="stacked-bar-rank">#${i + 1}</span>${d.department}</span></div>
           <div class="salary-range-track">
             <div class="salary-range-fill" style="left: ${leftPct}%; width: ${widthPct}%;"></div>
             <div class="salary-range-avg-marker" style="left: ${avgPct}%;" title="Average: $${Math.round(d.avgSalary).toLocaleString()}"></div>
           </div>
           <div class="salary-range-values">
-            <span>Min: <strong>$${d.minSalary.toLocaleString()}</strong></span>
-            <span>Avg: <strong>$${Math.round(d.avgSalary).toLocaleString()}</strong></span>
-            <span>Max: <strong>$${d.maxSalary.toLocaleString()}</strong></span>
+            ${statLabel("Min", `$${d.minSalary.toLocaleString()}`, sortField === "minSalary")} &nbsp;·&nbsp;
+            ${statLabel("Avg", `$${Math.round(d.avgSalary).toLocaleString()}`, sortField === "avgSalary")} &nbsp;·&nbsp;
+            ${statLabel("Max", `$${d.maxSalary.toLocaleString()}`, sortField === "maxSalary")} &nbsp;·&nbsp;
+            ${statLabel("Headcount", d.headcount, sortField === "headcount")} &nbsp;·&nbsp;
+            ${statLabel("Avg Performance", `${d.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")}
           </div>
         </div>`;
       }).join("");
@@ -1205,6 +1334,7 @@
     function renderAnalyticsKpis() {
       const totalEmployees = employees.length;
       const departmentCount = new Set(employees.map(e => e.department)).size;
+      const managerCount = new Set(employees.map(e => e.managerName)).size;
       const sourceCount = new Set(employees.map(e => e.recruitmentSource)).size;
       const active = employees.filter(e => e.employmentStatus === "Active").length;
       const activePct = (active / totalEmployees) * 100;
@@ -1220,6 +1350,10 @@
       const bestSource = sourceStats.reduce((best, s) => sourceRate(s) > sourceRate(best) ? s : best);
       const worstSource = sourceStats.reduce((worst, s) => sourceRate(s) < sourceRate(worst) ? s : worst);
 
+      const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE_SIZE);
+      const worstTeam = teamStats.reduce((worst, t) => t.retentionRate < worst.retentionRate ? t : worst);
+      const bestTeam = teamStats.reduce((best, t) => t.retentionRate > best.retentionRate ? t : best);
+
       const avgTenure = average(employees.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination)));
       const topReason = getTurnoverReasons()[0];
       const avgPerformanceOverall = average(employees.map(e => e.performanceScoreValue));
@@ -1227,8 +1361,9 @@
 
       renderKpiRow("kpiRowOverview", [
         { label: "Historical Employees", value: totalEmployees },
-        { label: "Departments", value: departmentCount },
         { label: "Active Employees", value: active, sub: `${activePct.toFixed(0)}% of total` },
+        { label: "Departments", value: departmentCount },
+        { label: "Hiring Managers", value: managerCount },
         { label: "Recruiting Sources", value: sourceCount }
       ]);
 
@@ -1236,7 +1371,9 @@
         { label: "Dept. Needing Attention", value: worstDept.department, sub: `${worstDept.retentionRate.toFixed(0)}% retention` },
         { label: "Top Performing Dept.", value: bestDept.department, sub: `${bestDept.retentionRate.toFixed(0)}% retention` },
         { label: "Source Needing Attention", value: worstSource.source, sub: `${sourceRate(worstSource).toFixed(0)}% retention` },
-        { label: "Top Performing Source", value: bestSource.source, sub: `${sourceRate(bestSource).toFixed(0)}% retention` }
+        { label: "Top Performing Source", value: bestSource.source, sub: `${sourceRate(bestSource).toFixed(0)}% retention` },
+        { label: "Manager Needing Attention", value: worstTeam.managerName, sub: `${worstTeam.retentionRate.toFixed(0)}% retention` },
+        { label: "Top Performing Manager", value: bestTeam.managerName, sub: `${bestTeam.retentionRate.toFixed(0)}% retention` }
       ]);
 
       renderKpiRow("kpiRowTrends", [
@@ -1252,6 +1389,7 @@
     renderTable();
     renderSourceStats();
     renderDepartmentStats();
+    renderTeamStats();
     renderRetentionSummary();
     renderTurnoverReasons();
     renderAnalyticsKpis();
