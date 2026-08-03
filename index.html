@@ -85,6 +85,9 @@
     .followup-info-row { display: flex; gap: 15px; margin-bottom: 15px; }
     .followup-info { background: #f5f5f5; padding: 15px; border-radius: 6px; flex: 1; }
     .followup-info p { margin: 4px 0; color: #333; }
+    .followup-info.good { background: #d4edda; }
+    .followup-info.moderate { background: #fff3cd; }
+    .followup-info.urgent { background: #ffe0e0; }
     #fu-currentNotes { white-space: pre-line; display: inline-block; vertical-align: top; }
     .followup-insight { background: #f0ebff; border: 1px dashed #6c5ce7; padding: 12px; border-radius: 6px; margin-bottom: 15px; color: #555; font-size: 13px; }
     .followup-update-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; }
@@ -152,8 +155,8 @@
           <p>Source: <span id="fu-source"></span></p>
         </div>
 
-        <div class="followup-info">
-          <p><strong>Current Status</strong></p>
+        <div class="followup-info" id="fu-statusCard">
+          <p><strong>Current Status - <span id="fu-urgencyLabel"></span></strong></p>
           <p>Last Contact: <span id="fu-currentLastContact"></span></p>
           <p>Stage: <span id="fu-currentStage"></span></p>
           <p>Notes: <span id="fu-currentNotes"></span></p>
@@ -174,7 +177,6 @@
           <div class="form-group">
             <label>2. Hiring Stage</label>
             <select id="fu-stage">
-              <option value="">-- Select Stage --</option>
               <option value="Applied">Applied</option>
               <option value="Screening">Screening</option>
               <option value="Interview 1">Interview 1</option>
@@ -441,8 +443,17 @@
       document.getElementById("fu-currentLastContact").textContent = formatContactField(c.lastContact);
       document.getElementById("fu-currentStage").textContent = c.stage || "—";
       document.getElementById("fu-currentNotes").textContent = c.notes || "No notes yet";
+
+      const days = Math.floor((new Date() - new Date(c.lastContact)) / 86400000);
+      let urgencyClass = "good", urgencyLabel = "On Track";
+      if (days > 14) { urgencyClass = "urgent"; urgencyLabel = "Overdue"; }
+      else if (days > 7) { urgencyClass = "moderate"; urgencyLabel = "Needs Attention"; }
+      const statusCard = document.getElementById("fu-statusCard");
+      statusCard.classList.remove("good", "moderate", "urgent");
+      statusCard.classList.add(urgencyClass);
+      document.getElementById("fu-urgencyLabel").textContent = urgencyLabel;
       document.getElementById("fu-lastContact").value = "";
-      document.getElementById("fu-stage").value = "";
+      document.getElementById("fu-stage").value = c.stage || "Applied";
       document.getElementById("fu-notes").value = "";
       document.getElementById("followUpModal").classList.add("active");
     }
@@ -462,15 +473,10 @@
         const c = candidates[followUpIndex];
         c.lastContact = lastContact;
 
-        const newStage = document.getElementById("fu-stage").value;
-        if (newStage) { c.stage = newStage; }
+        c.stage = document.getElementById("fu-stage").value;
 
         const newNote = document.getElementById("fu-notes").value.trim();
-        if (newNote) {
-          const dateLabel = new Date(lastContact).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
-          const entry = `${dateLabel}: ${newNote}`;
-          c.notes = c.notes ? `${c.notes}\n${entry}` : entry;
-        }
+        if (newNote) { c.notes = newNote; }
 
         renderTable();
       }
