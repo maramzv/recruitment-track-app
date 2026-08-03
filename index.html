@@ -1030,8 +1030,8 @@
           <td>${s.terminatedCause}</td>
           <td>${s.avgTenure.toFixed(1)}</td>
           <td>${s.avgPerformance.toFixed(1)} / 4</td>
-          <td>${s.avgEngagement.toFixed(2)}</td>
-          <td>${s.avgSatisfaction.toFixed(1)}</td>
+          <td>${s.avgEngagement.toFixed(2)} / 5</td>
+          <td>${s.avgSatisfaction.toFixed(1)} / 5</td>
         </tr>`).join("");
     }
 
@@ -1080,8 +1080,8 @@
           <td>${d.retentionRate.toFixed(0)}%</td>
           <td>${d.avgTenure.toFixed(1)}</td>
           <td>${d.avgPerformance.toFixed(1)} / 4</td>
-          <td>${d.avgEngagement.toFixed(2)}</td>
-          <td>${d.avgSatisfaction.toFixed(1)}</td>
+          <td>${d.avgEngagement.toFixed(2)} / 5</td>
+          <td>${d.avgSatisfaction.toFixed(1)} / 5</td>
           <td>$${Math.round(d.avgSalary).toLocaleString()}</td>
           <td>${d.topTurnoverReason}</td>
         </tr>`).join("");
@@ -1126,7 +1126,7 @@
           <td>${t.retentionRate.toFixed(0)}%</td>
           <td>${t.avgTenure.toFixed(1)}</td>
           <td>${t.avgPerformance.toFixed(1)} / 4</td>
-          <td>${t.avgSatisfaction.toFixed(1)}</td>
+          <td>${t.avgSatisfaction.toFixed(1)} / 5</td>
           <td>${t.topTurnoverReason}</td>
         </tr>`).join("");
     }
@@ -1183,7 +1183,7 @@
             <div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"></div>
             <div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"></div>
           </div>
-          <div class="stacked-bar-stats">${statLabel("Avg Performance", `${r.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")} &nbsp;·&nbsp; ${statLabel("Avg Tenure", `${r.avgTenure.toFixed(1)} yrs`, sortField === "avgTenure")} &nbsp;·&nbsp; ${statLabel("Avg Satisfaction", r.avgSatisfaction.toFixed(1), sortField === "avgSatisfaction")}</div>
+          <div class="stacked-bar-stats">${statLabel("Avg Performance", `${r.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")} &nbsp;·&nbsp; ${statLabel("Avg Tenure", `${r.avgTenure.toFixed(1)} yrs`, sortField === "avgTenure")} &nbsp;·&nbsp; ${statLabel("Avg Satisfaction", `${r.avgSatisfaction.toFixed(1)} / 5`, sortField === "avgSatisfaction")}</div>
         </div>`;
       }).join("");
     }
@@ -1463,6 +1463,9 @@
       const topReason = getTurnoverReasons()[0];
       const avgPerformanceOverall = average(employees.map(e => e.performanceScoreValue));
       const avgSatisfactionOverall = average(employees.map(e => e.empSatisfaction));
+      const avgEngagementOverall = average(employees.map(e => e.engagementSurvey));
+      const meetingOrExceeding = employees.filter(e => e.performanceScore === "Exceeds" || e.performanceScore === "Fully Meets").length;
+      const meetingOrExceedingPct = (meetingOrExceeding / employees.length) * 100;
 
       renderKpiRow("kpiRowOverview", [
         { label: "Historical Employees", value: totalEmployees },
@@ -1482,10 +1485,12 @@
       ]);
 
       renderKpiRow("kpiRowTrends", [
+        { label: "Performance Score", value: `${avgPerformanceOverall.toFixed(1)} / 4`, sub: "manager-rated work quality" },
+        { label: "Meeting Expectations", value: `${meetingOrExceedingPct.toFixed(0)}%`, sub: "% rated Fully Meets or Exceeds" },
+        { label: "Job Satisfaction", value: `${avgSatisfactionOverall.toFixed(1)} / 5`, sub: "day-to-day happiness" },
+        { label: "Employee Engagement", value: `${avgEngagementOverall.toFixed(2)} / 5`, sub: "motivation & involvement survey" },
         { label: "Avg Tenure", value: `${avgTenure.toFixed(1)} yrs` },
-        { label: "Avg Performance", value: `${avgPerformanceOverall.toFixed(1)} / 4`, sub: "baseline for department/source comparisons" },
-        { label: "Avg Satisfaction", value: avgSatisfactionOverall.toFixed(1), sub: "baseline for department/source comparisons" },
-        { label: "Top Exit Reason", value: topReason.reason, sub: `${topReason.pct.toFixed(0)}% of departures` }
+        { label: "Most Common Exit Reason", value: topReason.reason, sub: `${topReason.pct.toFixed(0)}% of departures` }
       ]);
     }
 
