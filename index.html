@@ -387,7 +387,7 @@
     <p class="kpi-group-label">Overview</p>
     <div class="kpi-row" id="kpiRowOverview"></div>
 
-    <p class="kpi-group-label">Needs Attention vs. Top Performing</p>
+    <p class="kpi-group-label">Top Performing vs. Lowest Retention Areas</p>
     <p class="analytics-subtitle">Groups with fewer than 5 hires are excluded to avoid small-sample bias. Full numbers are in the tables below.</p>
     <div class="kpi-row" id="kpiRowComparison"></div>
 
@@ -1473,12 +1473,12 @@
       ]);
 
       renderKpiRow("kpiRowComparison", [
-        { label: "Dept. Needing Attention", value: worstDept.department, sub: `${worstDept.retentionRate.toFixed(0)}% retention` },
         { label: "Top Performing Dept.", value: bestDept.department, sub: `${bestDept.retentionRate.toFixed(0)}% retention` },
-        { label: "Source Needing Attention", value: worstSource.source, sub: `${sourceRate(worstSource).toFixed(0)}% retention` },
         { label: "Top Performing Source", value: bestSource.source, sub: `${sourceRate(bestSource).toFixed(0)}% retention` },
-        { label: "Manager Needing Attention", value: worstTeam.managerName, sub: `${worstTeam.retentionRate.toFixed(0)}% retention` },
-        { label: "Top Performing Manager", value: bestTeam.managerName, sub: `${bestTeam.retentionRate.toFixed(0)}% retention` }
+        { label: "Top Performing Manager", value: bestTeam.managerName, sub: `${bestTeam.retentionRate.toFixed(0)}% retention` },
+        { label: "Lowest Retention Dept.", value: worstDept.department, sub: `${worstDept.retentionRate.toFixed(0)}% retention` },
+        { label: "Lowest Retention Source", value: worstSource.source, sub: `${sourceRate(worstSource).toFixed(0)}% retention` },
+        { label: "Lowest Retention Manager", value: worstTeam.managerName, sub: `${worstTeam.retentionRate.toFixed(0)}% retention` }
       ]);
 
       renderKpiRow("kpiRowTrends", [
