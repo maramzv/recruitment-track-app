@@ -122,6 +122,16 @@
     .donut-chart { width: 130px; height: 130px; border-radius: 50%; margin: 0 auto 12px auto; }
     .donut-legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #555; align-items: center; }
 
+    /* Salary range bars */
+    .salary-range-legend { display: flex; gap: 15px; margin-bottom: 16px; font-size: 12px; color: #555; flex-wrap: wrap; }
+    .salary-range-row { margin-bottom: 22px; }
+    .salary-range-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 6px; }
+    .salary-range-values { display: flex; gap: 14px; font-size: 12px; color: #666; margin-top: 6px; }
+    .salary-range-values strong { color: #333; }
+    .salary-range-track { position: relative; height: 14px; background: #f0f0f0; border-radius: 4px; }
+    .salary-range-fill { position: absolute; top: 0; height: 100%; background: #d8d1f7; border-radius: 4px; }
+    .salary-range-avg-marker { position: absolute; top: -4px; width: 3px; height: 22px; background: #6c5ce7; border-radius: 2px; }
+
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
     .cell-secondary { font-size: 12px; color: #666; }
@@ -503,6 +513,50 @@
             <div class="donut-chart" id="turnoverDonut"></div>
             <div class="donut-legend" id="turnoverDonutLegend"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="analytics-card" id="salaryCard">
+      <div class="card-header-row">
+        <div>
+          <h2>Salary Insights</h2>
+          <p class="analytics-subtitle">Historical compensation by department — use as a reference point for offer conversations.</p>
+        </div>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="setSalaryView('table', this)">Table</button>
+          <button class="view-toggle-btn" onclick="setSalaryView('chart', this)">Chart</button>
+        </div>
+      </div>
+
+      <div id="salaryTableView">
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th>Department</th><th>Headcount</th><th>Avg Salary</th><th>Min Salary</th><th>Max Salary</th><th>Avg Performance</th>
+            </tr>
+          </thead>
+          <tbody id="salaryStatsBody"></tbody>
+        </table>
+
+        <p class="analytics-subtitle" style="margin-top: 20px;">Top 10 highest-paid positions, company-wide.</p>
+        <table class="analytics-table">
+          <thead>
+            <tr><th>Position</th><th>Headcount</th><th>Avg Salary</th></tr>
+          </thead>
+          <tbody id="topPaidPositionsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="salaryChartView" style="display:none;">
+        <div class="mini-chart">
+          <h4>Salary Range by Department <span class="mini-chart-desc">— min, average, and max historical salary</span></h4>
+          <div class="salary-range-legend">
+            <span><span class="legend-swatch" style="background:#f0f0f0; border:1px solid #ddd;"></span>Company-wide salary scale</span>
+            <span><span class="legend-swatch" style="background:#d8d1f7;"></span>This department's min–max range</span>
+            <span><span class="legend-swatch" style="background:#6c5ce7;"></span>This department's average</span>
+          </div>
+          <div id="salaryRangeChart"></div>
         </div>
       </div>
     </div>
@@ -1010,6 +1064,91 @@
       if (view === "chart") { renderRetentionDonut(); renderTurnoverDonut(); }
     }
 
+    function setSalaryView(view, btn) {
+      document.querySelectorAll("#salaryCard .view-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("salaryTableView").style.display = view === "table" ? "block" : "none";
+      document.getElementById("salaryChartView").style.display = view === "chart" ? "block" : "none";
+      if (view === "chart") { renderSalaryRangeChart(); }
+    }
+
+    function getSalaryByDepartment() {
+      const departments = [...new Set(employees.map(e => e.department))].sort();
+      return departments.map(department => {
+        const group = employees.filter(e => e.department === department);
+        const salaries = group.map(e => e.salary);
+        return {
+          department,
+          headcount: group.length,
+          avgSalary: average(salaries),
+          minSalary: Math.min(...salaries),
+          maxSalary: Math.max(...salaries),
+          avgPerformance: average(group.map(e => e.performanceScoreValue))
+        };
+      });
+    }
+
+    function renderSalaryStats() {
+      const stats = getSalaryByDepartment();
+      document.getElementById("salaryStatsBody").innerHTML = stats.map(d => `
+        <tr>
+          <td>${d.department}</td>
+          <td>${d.headcount}</td>
+          <td>$${Math.round(d.avgSalary).toLocaleString()}</td>
+          <td>$${d.minSalary.toLocaleString()}</td>
+          <td>$${d.maxSalary.toLocaleString()}</td>
+          <td>${d.avgPerformance.toFixed(1)} / 4</td>
+        </tr>`).join("");
+    }
+
+    function getTopPaidPositions(limit) {
+      const positions = [...new Set(employees.map(e => e.position))];
+      return positions.map(position => {
+        const group = employees.filter(e => e.position === position);
+        return {
+          position,
+          headcount: group.length,
+          avgSalary: average(group.map(e => e.salary))
+        };
+      }).sort((a, b) => b.avgSalary - a.avgSalary).slice(0, limit);
+    }
+
+    function renderTopPaidPositions() {
+      const stats = getTopPaidPositions(10);
+      document.getElementById("topPaidPositionsBody").innerHTML = stats.map(p => `
+        <tr>
+          <td>${p.position}</td>
+          <td>${p.headcount}</td>
+          <td>$${Math.round(p.avgSalary).toLocaleString()}</td>
+        </tr>`).join("");
+    }
+
+    function renderSalaryRangeChart() {
+      const stats = getSalaryByDepartment();
+      const globalMin = Math.min(...stats.map(d => d.minSalary));
+      const globalMax = Math.max(...stats.map(d => d.maxSalary));
+      const range = globalMax - globalMin;
+      const sorted = [...stats].sort((a, b) => b.avgSalary - a.avgSalary);
+      document.getElementById("salaryRangeChart").innerHTML = sorted.map(d => {
+        const leftPct = ((d.minSalary - globalMin) / range) * 100;
+        const widthPct = ((d.maxSalary - d.minSalary) / range) * 100;
+        const avgPct = ((d.avgSalary - globalMin) / range) * 100;
+        return `
+        <div class="salary-range-row">
+          <div class="salary-range-label"><span>${d.department}</span></div>
+          <div class="salary-range-track">
+            <div class="salary-range-fill" style="left: ${leftPct}%; width: ${widthPct}%;"></div>
+            <div class="salary-range-avg-marker" style="left: ${avgPct}%;" title="Average: $${Math.round(d.avgSalary).toLocaleString()}"></div>
+          </div>
+          <div class="salary-range-values">
+            <span>Min: <strong>$${d.minSalary.toLocaleString()}</strong></span>
+            <span>Avg: <strong>$${Math.round(d.avgSalary).toLocaleString()}</strong></span>
+            <span>Max: <strong>$${d.maxSalary.toLocaleString()}</strong></span>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
     function getRetentionSummary() {
       const total = employees.length;
       const active = employees.filter(e => e.employmentStatus === "Active").length;
@@ -1083,6 +1222,8 @@
 
       const avgTenure = average(employees.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination)));
       const topReason = getTurnoverReasons()[0];
+      const avgPerformanceOverall = average(employees.map(e => e.performanceScoreValue));
+      const avgSatisfactionOverall = average(employees.map(e => e.empSatisfaction));
 
       renderKpiRow("kpiRowOverview", [
         { label: "Historical Employees", value: totalEmployees },
@@ -1100,6 +1241,8 @@
 
       renderKpiRow("kpiRowTrends", [
         { label: "Avg Tenure", value: `${avgTenure.toFixed(1)} yrs` },
+        { label: "Avg Performance", value: `${avgPerformanceOverall.toFixed(1)} / 4`, sub: "baseline for department/source comparisons" },
+        { label: "Avg Satisfaction", value: avgSatisfactionOverall.toFixed(1), sub: "baseline for department/source comparisons" },
         { label: "Top Exit Reason", value: topReason.reason, sub: `${topReason.pct.toFixed(0)}% of departures` }
       ]);
     }
@@ -1114,6 +1257,8 @@
     renderAnalyticsKpis();
     renderRetentionDonut();
     renderTurnoverDonut();
+    renderSalaryStats();
+    renderTopPaidPositions();
   </script>
 </body>
 </html>
