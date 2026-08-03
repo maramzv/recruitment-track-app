@@ -81,14 +81,19 @@
     /* Follow Up modal */
     .followup-btn { padding: 5px 10px; background: #6c5ce7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
     .followup-btn:hover { background: #5849c2; }
-    .followup-modal .modal { max-width: 480px; text-align: left; }
-    .followup-info { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+    .followup-modal .modal { max-width: 640px; text-align: left; max-height: 85vh; overflow-y: auto; }
+    .followup-info-row { display: flex; gap: 15px; margin-bottom: 15px; }
+    .followup-info { background: #f5f5f5; padding: 15px; border-radius: 6px; flex: 1; }
     .followup-info p { margin: 4px 0; color: #333; }
     #fu-currentNotes { white-space: pre-line; display: inline-block; vertical-align: top; }
     .followup-insight { background: #f0ebff; border: 1px dashed #6c5ce7; padding: 12px; border-radius: 6px; margin-bottom: 15px; color: #555; font-size: 13px; }
     .followup-update-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; }
     .followup-update-box h4 { margin-top: 0; color: #333; }
     .followup-update-box .form-group { display: block; margin: 10px 0; }
+    .followup-fields-row { display: flex; gap: 15px; }
+    .followup-fields-row .form-group { flex: 1; }
+    .followup-fields-row select, .followup-fields-row input { width: 100%; box-sizing: border-box; }
+    .followup-reassurance { font-weight: normal; font-size: 11px; color: #888; }
     .followup-update-box textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: Arial, sans-serif; box-sizing: border-box; }
   </style>
 </head>
@@ -139,18 +144,20 @@
     <div class="modal">
       <h3 style="color: #6c5ce7;">📞 Follow Up</h3>
 
-      <div class="followup-info">
-        <p><strong id="fu-name"></strong> — <span id="fu-role"></span> (<span id="fu-department"></span>)</p>
-        <p>📧 <span id="fu-email"></span></p>
-        <p>📱 <span id="fu-phone"></span></p>
-        <p>Source: <span id="fu-source"></span></p>
-      </div>
+      <div class="followup-info-row">
+        <div class="followup-info">
+          <p><strong id="fu-name"></strong> — <span id="fu-role"></span> (<span id="fu-department"></span>)</p>
+          <p>📧 <span id="fu-email"></span></p>
+          <p>📱 <span id="fu-phone"></span></p>
+          <p>Source: <span id="fu-source"></span></p>
+        </div>
 
-      <div class="followup-info">
-        <p><strong>Current Status</strong></p>
-        <p>Last Contact: <span id="fu-currentLastContact"></span></p>
-        <p>Stage: <span id="fu-currentStage"></span></p>
-        <p>Notes: <span id="fu-currentNotes"></span></p>
+        <div class="followup-info">
+          <p><strong>Current Status</strong></p>
+          <p>Last Contact: <span id="fu-currentLastContact"></span></p>
+          <p>Stage: <span id="fu-currentStage"></span></p>
+          <p>Notes: <span id="fu-currentNotes"></span></p>
+        </div>
       </div>
 
       <div class="followup-insight">
@@ -158,33 +165,33 @@
       </div>
 
       <div class="followup-update-box">
-        <h4>After you contact them, update:</h4>
-        <div class="form-group">
-          <label>1. Last Contact Date</label>
-          <input id="fu-lastContact" type="date" max="">
+        <h4>After contacting this candidate, update:</h4>
+        <div class="followup-fields-row">
+          <div class="form-group">
+            <label>1. Last Contact Date</label>
+            <input id="fu-lastContact" type="date" max="">
+          </div>
+          <div class="form-group">
+            <label>2. Hiring Stage</label>
+            <select id="fu-stage">
+              <option value="">-- Select Stage --</option>
+              <option value="Applied">Applied</option>
+              <option value="Screening">Screening</option>
+              <option value="Interview 1">Interview 1</option>
+              <option value="Interview 2">Interview 2</option>
+              <option value="Offer">Offer</option>
+              <option value="Hired">Hired</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
-          <label>2. Hiring Stage</label>
-          <select id="fu-stage">
-            <option value="">-- Select Stage --</option>
-            <option value="Applied">Applied</option>
-            <option value="Screening">Screening</option>
-            <option value="Interview 1">Interview 1</option>
-            <option value="Interview 2">Interview 2</option>
-            <option value="Offer">Offer</option>
-            <option value="Hired">Hired</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>3. Notes</label>
+          <label>3. Notes <span class="followup-reassurance">(you can edit notes later using "Actions")</span></label>
           <textarea id="fu-notes" rows="3" placeholder="e.g. Left voicemail, said she'd call back Friday"></textarea>
         </div>
       </div>
 
-      <p style="font-size: 12px; color: #888; margin-top: 10px;">You can always correct notes later from the 📝 Notes button.</p>
-
-      <div class="modal-buttons" style="margin-top: 10px;">
+      <div class="modal-buttons" style="margin-top: 15px;">
         <button class="keep-btn" onclick="closeFollowUpModal()">Cancel</button>
         <button class="update-btn" onclick="saveFollowUp()">✅ Save Follow-Up</button>
       </div>
