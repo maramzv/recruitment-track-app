@@ -84,6 +84,7 @@
     .followup-modal .modal { max-width: 480px; text-align: left; }
     .followup-info { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
     .followup-info p { margin: 4px 0; color: #333; }
+    #fu-currentNotes { white-space: pre-line; display: inline-block; vertical-align: top; }
     .followup-insight { background: #f0ebff; border: 1px dashed #6c5ce7; padding: 12px; border-radius: 6px; margin-bottom: 15px; color: #555; font-size: 13px; }
     .followup-update-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; }
     .followup-update-box h4 { margin-top: 0; color: #333; }
@@ -145,6 +146,13 @@
         <p>Source: <span id="fu-source"></span></p>
       </div>
 
+      <div class="followup-info">
+        <p><strong>Current Status</strong></p>
+        <p>Last Contact: <span id="fu-currentLastContact"></span></p>
+        <p>Stage: <span id="fu-currentStage"></span></p>
+        <p>Notes: <span id="fu-currentNotes"></span></p>
+      </div>
+
       <div class="followup-insight">
         💡 <strong>Hiring Insight — coming soon.</strong> Once Workforce Analytics and Hiring Intelligence are built, a department/role/source insight for this candidate will show here.
       </div>
@@ -158,6 +166,7 @@
         <div class="form-group">
           <label>2. Hiring Stage</label>
           <select id="fu-stage">
+            <option value="">-- Select Stage --</option>
             <option value="Applied">Applied</option>
             <option value="Screening">Screening</option>
             <option value="Interview 1">Interview 1</option>
@@ -173,7 +182,9 @@
         </div>
       </div>
 
-      <div class="modal-buttons" style="margin-top: 15px;">
+      <p style="font-size: 12px; color: #888; margin-top: 10px;">You can always correct notes later from the 📝 Notes button.</p>
+
+      <div class="modal-buttons" style="margin-top: 10px;">
         <button class="keep-btn" onclick="closeFollowUpModal()">Cancel</button>
         <button class="update-btn" onclick="saveFollowUp()">✅ Save Follow-Up</button>
       </div>
@@ -420,9 +431,12 @@
       document.getElementById("fu-email").textContent = c.email || "—";
       document.getElementById("fu-phone").textContent = c.phone || "—";
       document.getElementById("fu-source").textContent = c.source || "—";
-      document.getElementById("fu-lastContact").value = c.lastContact;
-      document.getElementById("fu-stage").value = c.stage || "Applied";
-      document.getElementById("fu-notes").value = c.notes || "";
+      document.getElementById("fu-currentLastContact").textContent = formatContactField(c.lastContact);
+      document.getElementById("fu-currentStage").textContent = c.stage || "—";
+      document.getElementById("fu-currentNotes").textContent = c.notes || "No notes yet";
+      document.getElementById("fu-lastContact").value = "";
+      document.getElementById("fu-stage").value = "";
+      document.getElementById("fu-notes").value = "";
       document.getElementById("followUpModal").classList.add("active");
     }
 
@@ -434,11 +448,23 @@
     function saveFollowUp() {
       if (followUpIndex !== null) {
         const lastContact = document.getElementById("fu-lastContact").value;
+        if (!lastContact) { alert("Please enter the date you contacted them."); return; }
         const todayStr = new Date().toISOString().split("T")[0];
         if (lastContact > todayStr) { alert("Last contact date cannot be in the future."); return; }
-        candidates[followUpIndex].lastContact = lastContact;
-        candidates[followUpIndex].stage = document.getElementById("fu-stage").value;
-        candidates[followUpIndex].notes = document.getElementById("fu-notes").value;
+
+        const c = candidates[followUpIndex];
+        c.lastContact = lastContact;
+
+        const newStage = document.getElementById("fu-stage").value;
+        if (newStage) { c.stage = newStage; }
+
+        const newNote = document.getElementById("fu-notes").value.trim();
+        if (newNote) {
+          const dateLabel = new Date(lastContact).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+          const entry = `${dateLabel}: ${newNote}`;
+          c.notes = c.notes ? `${c.notes}\n${entry}` : entry;
+        }
+
         renderTable();
       }
       closeFollowUpModal();
