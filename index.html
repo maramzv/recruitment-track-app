@@ -99,14 +99,19 @@
     .mini-chart-desc { font-weight: normal; color: #888; font-size: 12px; }
 
     /* Stacked composition bars */
+    .chart-sort-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; color: #555; }
+    .chart-sort-row select { padding: 5px 8px; font-size: 13px; }
+    .stacked-bar-rank { font-weight: bold; color: #888; margin-right: 6px; }
     .stacked-bar-legend { display: flex; gap: 15px; margin-bottom: 12px; font-size: 12px; color: #555; }
     .legend-swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
     .legend-swatch.active { background: #27ae60; }
     .legend-swatch.voluntary { background: #f39c12; }
     .legend-swatch.terminated { background: #e74c3c; }
-    .stacked-bar-row { margin-bottom: 12px; max-width: 460px; }
+    .stacked-bar-row { margin-bottom: 12px; }
     .stacked-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #333; margin-bottom: 4px; }
     .stacked-bar-track { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #f0f0f0; }
+    .stacked-bar-stats { font-size: 11px; color: #888; margin-top: 4px; }
+    .stacked-bar-stat-highlight { font-weight: bold; color: #333; }
     .stacked-bar-segment.active { background: #27ae60; }
     .stacked-bar-segment.voluntary { background: #f39c12; }
     .stacked-bar-segment.terminated { background: #e74c3c; }
@@ -400,6 +405,16 @@
       <div id="sourceChartView" style="display:none;">
         <div class="mini-chart">
           <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired through each source</span></h4>
+          <div class="chart-sort-row">
+            <label for="sourceSortSelect">Sort by</label>
+            <select id="sourceSortSelect" onchange="renderSourceChart()">
+              <option value="active">% Active (highest first)</option>
+              <option value="avgPerformance">Avg Performance</option>
+              <option value="avgTenure">Avg Tenure</option>
+              <option value="avgSatisfaction">Avg Satisfaction</option>
+              <option value="total">Hired (most first)</option>
+            </select>
+          </div>
           <div class="stacked-bar-legend">
             <span><span class="legend-swatch active"></span>Active</span>
             <span><span class="legend-swatch voluntary"></span>Voluntary Left</span>
@@ -433,6 +448,16 @@
       <div id="departmentChartView" style="display:none;">
         <div class="mini-chart">
           <h4>Outcome Composition <span class="mini-chart-desc">— what happened to everyone hired into each department</span></h4>
+          <div class="chart-sort-row">
+            <label for="deptSortSelect">Sort by</label>
+            <select id="deptSortSelect" onchange="renderDepartmentChart()">
+              <option value="active">% Active (highest first)</option>
+              <option value="avgPerformance">Avg Performance</option>
+              <option value="avgTenure">Avg Tenure</option>
+              <option value="avgSatisfaction">Avg Satisfaction</option>
+              <option value="total">Headcount (most first)</option>
+            </select>
+          </div>
           <div class="stacked-bar-legend">
             <span><span class="legend-swatch active"></span>Active</span>
             <span><span class="legend-swatch voluntary"></span>Voluntary Left</span>
@@ -870,33 +895,51 @@
         </tr>`).join("");
     }
 
+    function highlightIf(value, isHighlighted) {
+      return isHighlighted ? `<span class="stacked-bar-stat-highlight">${value}</span>` : value;
+    }
+
+    function statLabel(name, value, isHighlighted) {
+      return highlightIf(`${name}: ${value}`, isHighlighted);
+    }
+
     // One stacked bar per row: Active / Voluntary Left / Terminated for Cause, as % of that row's total.
-    function renderStackedBars(elementId, rows) {
-      document.getElementById(elementId).innerHTML = rows.map(r => {
+    // sortField: "active" (uses active/total ratio), "total", or an avg* field on the row.
+    function renderStackedBars(elementId, rows, countLabel, sortField) {
+      const sorted = [...rows].sort((a, b) => {
+        const valA = sortField === "active" ? a.active / a.total : a[sortField];
+        const valB = sortField === "active" ? b.active / b.total : b[sortField];
+        return valB - valA;
+      });
+      document.getElementById(elementId).innerHTML = sorted.map((r, i) => {
         const activePct = (r.active / r.total) * 100;
         const voluntaryPct = (r.voluntaryLeft / r.total) * 100;
         const terminatedPct = (r.terminatedCause / r.total) * 100;
         return `
         <div class="stacked-bar-row">
-          <div class="stacked-bar-label"><span>${r.name}</span><span>${activePct.toFixed(0)}% Active</span></div>
+          <div class="stacked-bar-label"><span><span class="stacked-bar-rank">#${i + 1}</span>${r.name} — ${highlightIf(`${r.total} ${countLabel}`, sortField === "total")}</span><span>${highlightIf(`${activePct.toFixed(0)}% Active`, sortField === "active")}</span></div>
           <div class="stacked-bar-track">
             <div class="stacked-bar-segment active" style="width: ${activePct}%;" title="Active: ${r.active}"></div>
             <div class="stacked-bar-segment voluntary" style="width: ${voluntaryPct}%;" title="Voluntary Left: ${r.voluntaryLeft}"></div>
             <div class="stacked-bar-segment terminated" style="width: ${terminatedPct}%;" title="Terminated for Cause: ${r.terminatedCause}"></div>
           </div>
+          <div class="stacked-bar-stats">${statLabel("Avg Performance", `${r.avgPerformance.toFixed(1)} / 4`, sortField === "avgPerformance")} &nbsp;·&nbsp; ${statLabel("Avg Tenure", `${r.avgTenure.toFixed(1)} yrs`, sortField === "avgTenure")} &nbsp;·&nbsp; ${statLabel("Avg Satisfaction", r.avgSatisfaction.toFixed(1), sortField === "avgSatisfaction")}</div>
         </div>`;
       }).join("");
     }
 
     function renderSourceChart() {
       const stats = getSourceStats();
+      const sortField = document.getElementById("sourceSortSelect").value;
       renderStackedBars("sourceChart-composition", stats.map(s => ({
-        name: s.source, total: s.hired, active: s.active, voluntaryLeft: s.voluntaryLeft, terminatedCause: s.terminatedCause
-      })).sort((a, b) => (b.active / b.total) - (a.active / a.total)));
+        name: s.source, total: s.hired, active: s.active, voluntaryLeft: s.voluntaryLeft, terminatedCause: s.terminatedCause,
+        avgPerformance: s.avgPerformance, avgTenure: s.avgTenure, avgSatisfaction: s.avgSatisfaction
+      })), "hired", sortField);
     }
 
     function renderDepartmentChart() {
       const stats = getDepartmentStats();
+      const sortField = document.getElementById("deptSortSelect").value;
       renderStackedBars("deptChart-composition", stats.map(d => {
         const group = employees.filter(e => e.department === d.department);
         return {
@@ -904,9 +947,10 @@
           total: d.headcount,
           active: group.filter(e => e.employmentStatus === "Active").length,
           voluntaryLeft: group.filter(e => e.employmentStatus === "Voluntarily Terminated").length,
-          terminatedCause: group.filter(e => e.employmentStatus === "Terminated for Cause").length
+          terminatedCause: group.filter(e => e.employmentStatus === "Terminated for Cause").length,
+          avgPerformance: d.avgPerformance, avgTenure: d.avgTenure, avgSatisfaction: d.avgSatisfaction
         };
-      }).sort((a, b) => (b.active / b.total) - (a.active / a.total)));
+      }), "headcount", sortField);
     }
 
     // Simple CSS conic-gradient donut chart. slices: [{label, value, color}]
