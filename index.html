@@ -663,16 +663,27 @@
       <div class="insight-stack" id="sourceInsightBody"></div>
     </div>
 
+    <div class="analytics-card" id="candidateContextCard">
+      <h2>Candidate Quality Context</h2>
+      <p class="analytics-subtitle">Candidates worth a second look, plus how any specific candidate's department and source have historically performed. Groups with fewer than 5 historical hires are excluded.</p>
+      <div class="insight-stack" id="candidateContextWatch"></div>
+      <div class="chart-sort-row">
+        <label for="candidateContextSelect">Candidate</label>
+        <select id="candidateContextSelect" onchange="renderCandidateContext()"></select>
+      </div>
+      <div class="insight-stack" id="candidateContextBody"></div>
+    </div>
+
     <div class="analytics-card" id="departmentInsightCard">
       <h2>Department Insights &amp; Recommendations</h2>
       <p class="analytics-subtitle">Which departments hire and retain well historically, read against where your active candidates are headed. Groups with fewer than 5 historical hires are excluded.</p>
       <div class="insight-stack" id="departmentInsightBody"></div>
     </div>
 
-    <div class="analytics-card" id="generalInsightCard">
-      <h2>General Insights &amp; Recommendations</h2>
-      <p class="analytics-subtitle">Cross-cutting takeaways — manager performance and pipeline candidates whose department + source combination stands out historically, for better or worse.</p>
-      <div class="insight-stack" id="generalInsightBody"></div>
+    <div class="analytics-card" id="managerInsightCard">
+      <h2>Manager Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Which managers retain and develop talent best historically, across departments.</p>
+      <div class="insight-stack" id="managerInsightBody"></div>
     </div>
   </div>
 
@@ -1567,7 +1578,7 @@
           ${deptRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
         </div>`;
 
-      // --- General: managers + department/source combo outliers ---
+      // --- Manager Insights ---
       const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE);
       const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
       const teamPerf = pickExtreme(teamStats, t => t.avgPerformance, t => t.managerName);
@@ -1577,6 +1588,12 @@
         `By performance, <strong>${teamPerf.best.names}</strong>'s team rates highest (${teamPerf.best.metric.toFixed(1)} / 4), and <strong>${teamPerf.worst.names}</strong>'s rates lowest (${teamPerf.worst.metric.toFixed(1)} / 4).`
       ] : ["Not enough historical hires per manager (minimum 5) to compare managers yet."];
 
+      document.getElementById("managerInsightBody").innerHTML = `
+        <div class="insight-block">
+          ${managerLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
+        </div>`;
+
+      // --- Candidate Quality Context: auto-flagged watch list + selector ---
       const deptBestSet = new Set(deptRet.best.names.split(", ").filter(Boolean));
       const deptWorstSet = new Set(deptRet.worst.names.split(", ").filter(Boolean));
       const sourceBestSet = new Set(sourceRet.best.names.split(", ").filter(Boolean));
@@ -1596,13 +1613,65 @@
         ? flagged.map(f => `<p class="insight-line">${f.tone === "positive" ? "🟢" : "🔴"} <strong>${f.c.name}</strong> (${f.c.role || f.c.department}) — ${f.reason}.</p>`).join("")
         : `<p class="insight-empty">No active candidates currently sit at a department + source combination that stands out historically.</p>`;
 
-      document.getElementById("generalInsightBody").innerHTML = `
-        <div class="insight-block">
-          ${managerLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
-        </div>
+      document.getElementById("candidateContextWatch").innerHTML = `
         <div class="insight-block">
           <p class="insight-line"><strong>Candidates worth watching</strong> — department + source combinations that stand out historically.</p>
           ${watchHtml}
+        </div>`;
+
+      const contextSelect = document.getElementById("candidateContextSelect");
+      const previousSelection = contextSelect.value;
+      contextSelect.innerHTML = activePipeline.length > 0
+        ? activePipeline.map((c, i) => `<option value="${i}">${c.name} — ${c.role || c.department}</option>`).join("")
+        : `<option value="">No active candidates</option>`;
+      if (previousSelection && activePipeline[previousSelection]) contextSelect.value = previousSelection;
+      renderCandidateContext();
+    }
+
+    // Builds the per-candidate Quality Context card: how the candidate's source and
+    // department have historically performed, joined the same way as the Source/Department
+    // insight cards above, just narrowed to one candidate instead of aggregated.
+    function renderCandidateContext() {
+      const MIN_SAMPLE = 5;
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+      const select = document.getElementById("candidateContextSelect");
+      const body = document.getElementById("candidateContextBody");
+      const candidate = activePipeline[select.value];
+
+      if (!candidate) {
+        body.innerHTML = `<div class="insight-block"><p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see quality context here.</p></div>`;
+        return;
+      }
+
+      const sourceStats = getSourceStats().find(s => s.source === candidate.source && s.hired >= MIN_SAMPLE);
+      const deptStats = getDepartmentStats().find(d => d.department === candidate.department && d.headcount >= MIN_SAMPLE);
+
+      const lines = [];
+      if (sourceStats) {
+        lines.push(`<strong>${candidate.source}</strong> hires historically retain at ${sourceStats.retentionRate.toFixed(0)}% and average ${sourceStats.avgPerformance.toFixed(1)} / 4 on performance (${sourceStats.hired} historical hires).`);
+      } else {
+        lines.push(`<strong>${candidate.source}</strong> doesn't have enough historical hires (minimum 5) to benchmark yet.`);
+      }
+      if (deptStats) {
+        lines.push(`<strong>${candidate.department}</strong> historically retains at ${deptStats.retentionRate.toFixed(0)}% and averages ${deptStats.avgPerformance.toFixed(1)} / 4 on performance (${deptStats.headcount} historical hires).`);
+      } else {
+        lines.push(`<strong>${candidate.department}</strong> doesn't have enough historical hires (minimum 5) to benchmark yet.`);
+      }
+
+      let matchHtml = `<p class="insight-empty">Not enough historical data on this department and source combination to compute a match score yet.</p>`;
+      if (sourceStats && deptStats) {
+        const matchScore = (sourceStats.retentionRate + deptStats.retentionRate) / 2;
+        const tone = matchScore >= 70 ? "✅" : matchScore >= 50 ? "⚠️" : "🔴";
+        matchHtml = `<div class="insight-recommendation">${tone} <strong>Historic match score: ${matchScore.toFixed(0)}%</strong> — average of this source's and this department's historical retention rates.</div>`;
+      }
+
+      body.innerHTML = `
+        <div class="insight-block">
+          <p class="insight-line"><strong>${candidate.name}</strong> — ${candidate.role || "Role not set"} (${candidate.department})</p>
+          ${lines.map(l => `<p class="insight-line">${l}</p>`).join("")}
+        </div>
+        <div class="insight-block">
+          ${matchHtml}
         </div>`;
     }
 
