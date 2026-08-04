@@ -725,14 +725,18 @@
 
     // Testing-only sample data — remove before final build
     const SAMPLE_CANDIDATES = [
-      { name: "Sarah Jones", role: "Software Engineer", department: "IT", stage: "Interview 2", email: "sarah.jones@email.com", phone: "555-201-3344", source: "LinkedIn", lastContact: "2026-07-20", notes: "Strong technical interview, waiting on manager feedback." },
-      { name: "Marcus Lee", role: "Sales Manager", department: "Sales", stage: "Screening", email: "marcus.lee@email.com", phone: "555-330-8821", source: "Employee Referral", lastContact: "2026-07-30", notes: "" },
-      { name: "Priya Kapoor", role: "Financial Analyst", department: "Finance", stage: "Offer", email: "priya.kapoor@email.com", phone: "555-118-4420", source: "Indeed", lastContact: "2026-07-10", notes: "Offer sent, awaiting response." },
-      { name: "Devon Carter", role: "Operations Coordinator", department: "Operations", stage: "Applied", email: "devon.carter@email.com", phone: "555-902-1123", source: "CareerBuilder", lastContact: "2026-08-01", notes: "" },
-      { name: "Alicia Nguyen", role: "IT Support Specialist", department: "IT", stage: "Interview 1", email: "alicia.nguyen@email.com", phone: "555-475-9002", source: "Website", lastContact: "2026-07-15", notes: "Requested to reschedule first interview." },
-      { name: "Ben Turner", role: "Account Executive", department: "Sales", stage: "Rejected", email: "ben.turner@email.com", phone: "555-611-7734", source: "Google Search", lastContact: "2026-06-25", notes: "Not a fit for current opening." },
-      { name: "Jean Robles", role: "HR Generalist", department: "Operations", stage: "Screening", email: "jean.robles@email.com", phone: "555-284-6650", source: "Diversity Job Fair", lastContact: "2026-06-30", notes: "" },
-      { name: "Tomas Ruiz", role: "Data Analyst", department: "Finance", stage: "Hired", email: "tomas.ruiz@email.com", phone: "555-559-2201", source: "On-line Web application", lastContact: "2026-07-28", notes: "Accepted offer, starting next month." }
+      { name: "Elena Vasquez", role: "IT Support", department: "IT/IS", stage: "Screening", email: "elena.vasquez@email.com", phone: "555-201-4471", source: "LinkedIn", lastContact: "2026-07-17", notes: "" },
+      { name: "Malik Johnson", role: "Quality Control Inspector", department: "Production", stage: "Interview 1", email: "malik.johnson@email.com", phone: "555-330-2298", source: "Indeed", lastContact: "2026-08-01", notes: "" },
+      { name: "Amanda Clark", role: "Cloud Applications Engineer", department: "Software Engineering", stage: "Interview 2", email: "amanda.clark@email.com", phone: "555-118-7743", source: "Google Search", lastContact: "2026-07-22", notes: "Waiting on take-home assessment results." },
+      { name: "Ravi Patel", role: "Database Administrator", department: "IT/IS", stage: "Applied", email: "ravi.patel@email.com", phone: "555-475-3382", source: "Employee Referral", lastContact: "2026-07-24", notes: "" },
+      { name: "Owen Mitchell", role: "Regional Sales Director", department: "Sales", stage: "Screening", email: "owen.mitchell@email.com", phone: "555-902-5510", source: "Diversity Job Fair", lastContact: "2026-07-16", notes: "" },
+      { name: "Grace Kim", role: "Executive Assistant to the CEO", department: "Executive Office", stage: "Offer", email: "grace.kim@email.com", phone: "555-611-8804", source: "Website", lastContact: "2026-08-02", notes: "Offer sent, awaiting response." },
+      { name: "Diego Fernandez", role: "Full Stack Software Engineer", department: "Software Engineering", stage: "Interview 1", email: "diego.fernandez@email.com", phone: "555-284-9012", source: "CareerBuilder", lastContact: "2026-07-31", notes: "" },
+      { name: "Natalie Brooks", role: "Sr. Accountant", department: "Admin Offices", stage: "Interview 2", email: "natalie.brooks@email.com", phone: "555-559-6631", source: "Website", lastContact: "2026-07-28", notes: "Strong technical interview, waiting on manager feedback." },
+      { name: "Andre Coleman", role: "Network Engineer", department: "IT/IS", stage: "Screening", email: "andre.coleman@email.com", phone: "555-773-1290", source: "Website", lastContact: "2026-07-29", notes: "" },
+      { name: "Hannah Whitfield", role: "Production Manager", department: "Production", stage: "Applied", email: "hannah.whitfield@email.com", phone: "555-820-4456", source: "LinkedIn", lastContact: "2026-07-29", notes: "" },
+      { name: "Miguel Santos", role: "Strategic Accounts Sales Manager", department: "Sales", stage: "Rejected", email: "miguel.santos@email.com", phone: "555-347-6612", source: "Employee Referral", lastContact: "2026-08-03", notes: "Not a fit for current opening." },
+      { name: "Darnell Jefferson", role: "Quality Control Inspector", department: "Production", stage: "Hired", email: "darnell.jefferson@email.com", phone: "555-905-2287", source: "Indeed", lastContact: "2026-07-27", notes: "Accepted offer, waiting on signed paperwork and onboarding confirmation before start date." }
     ];
 
     function loadSampleData() {
