@@ -665,6 +665,18 @@
       <div class="insight-stack" id="sourceInsightBody"></div>
     </div>
 
+    <div class="analytics-card" id="sourceInsightCardV2">
+      <h2>Source Insights &amp; Recommendations (Draft 2 &mdash; richer facts)</h2>
+      <p class="analytics-subtitle">Same retention and performance comparison, plus tenure and employee sentiment (satisfaction + engagement), pulled from fields already computed but previously unused here.</p>
+      <div class="insight-stack" id="sourceInsightBodyV2"></div>
+    </div>
+
+    <div class="analytics-card" id="sourceInsightCardV3">
+      <h2>Source Insights &amp; Recommendations (Draft 3 &mdash; candidate-level actions)</h2>
+      <p class="analytics-subtitle">Placeholder pass: every candidate-level action we discussed, bucketed by scenario, so we can see them side by side before refining the wording.</p>
+      <div class="insight-stack" id="sourceInsightBodyV3"></div>
+    </div>
+
     <div class="analytics-card" id="candidateContextCard">
       <h2>Candidate Quality Context</h2>
       <p class="analytics-subtitle">Active candidates worth a second look, based on historical department and source performance.</p>
@@ -1533,6 +1545,17 @@
       return `<strong>${perfSide.names}</strong>'s team rates ${label} by performance (${perfSide.metric.toFixed(1)} / 4), and <strong>${satSide.names}</strong>'s team rates ${label} by satisfaction (${satSide.metric.toFixed(1)} / 5).`;
     }
 
+    // Same "only merge if it's actually the same group" logic as combineIfSame, worded for
+    // a recruiting source's hires rather than a manager's team. satAdj/engAdj are the
+    // superlative words to use for satisfaction and engagement respectively (they read
+    // differently: "highest/lowest satisfaction" vs. "best/worst engagement").
+    function combineSourceSentimentIfSame(satSide, engSide, satAdj, engAdj) {
+      if (satSide.names === engSide.names) {
+        return `<strong>${satSide.names}</strong> has the ${satAdj} employee satisfaction (${satSide.metric.toFixed(1)} / 5) and the ${engAdj} employee engagement (${engSide.metric.toFixed(2)} / 5).`;
+      }
+      return `<strong>${satSide.names}</strong> has the ${satAdj} employee satisfaction (${satSide.metric.toFixed(1)} / 5) and <strong>${engSide.names}</strong> the ${engAdj} employee engagement (${engSide.metric.toFixed(2)} / 5).`;
+    }
+
     function countBy(list, field) {
       const counts = {};
       list.forEach(item => {
@@ -1569,6 +1592,125 @@
         <div class="insight-block">
           ${sourceLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
           ${sourceRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- Source (Draft 2): same retention + performance lines, plus tenure and
+      // sentiment (satisfaction/engagement, merged only when the same source wins both).
+      const sourceTenure = pickExtreme(sourceStats, s => s.avgTenure, s => s.source);
+      const sourceSat = pickExtreme(sourceStats, s => s.avgSatisfaction, s => s.source);
+      const sourceEng = pickExtreme(sourceStats, s => s.avgEngagement, s => s.source);
+
+      // Bundle retention + tenure per source (merged when the same source wins both, same
+      // "only merge if true" rule as the manager/sentiment lines), and fold in the performance
+      // fact too when it happens to land on the same source, instead of restating it separately.
+      let perfBestCovered = false;
+      let perfWorstCovered = false;
+
+      let bestRetTenureLine = `<strong>${sourceRet.best.names}</strong> has the strongest historical retention (${sourceRet.best.metric.toFixed(0)}%)` +
+        (sourceRet.best.names === sourceTenure.best.names
+          ? ` and hires stay longest on average (${sourceTenure.best.metric.toFixed(1)} yrs)`
+          : `, while <strong>${sourceTenure.best.names}</strong> hires stay longest on average (${sourceTenure.best.metric.toFixed(1)} yrs)`);
+      if (sourceRet.best.names === sourcePerf.worst.names) {
+        bestRetTenureLine += ` but produces the lowest-rated hires (${sourcePerf.worst.metric.toFixed(1)} / 4)`;
+        perfWorstCovered = true;
+      }
+      bestRetTenureLine += ".";
+
+      let worstRetTenureLine = `<strong>${sourceRet.worst.names}</strong> has the weakest historical retention (${sourceRet.worst.metric.toFixed(0)}%)` +
+        (sourceRet.worst.names === sourceTenure.worst.names
+          ? ` and the shortest average tenure (${sourceTenure.worst.metric.toFixed(1)} yrs)`
+          : `, while <strong>${sourceTenure.worst.names}</strong> hires have the shortest average tenure (${sourceTenure.worst.metric.toFixed(1)} yrs)`);
+      if (sourceRet.worst.names === sourcePerf.best.names) {
+        worstRetTenureLine += `, though it produces the highest-rated hires (${sourcePerf.best.metric.toFixed(1)} / 4)`;
+        perfBestCovered = true;
+      }
+      worstRetTenureLine += ".";
+
+      const perfLines = [];
+      if (!perfBestCovered && !perfWorstCovered) {
+        perfLines.push(`By performance, <strong>${sourcePerf.best.names}</strong> produces the highest-rated hires (${sourcePerf.best.metric.toFixed(1)} / 4), and <strong>${sourcePerf.worst.names}</strong> the lowest (${sourcePerf.worst.metric.toFixed(1)} / 4).`);
+      } else {
+        if (!perfBestCovered) perfLines.push(`<strong>${sourcePerf.best.names}</strong> produces the best-performing hires (${sourcePerf.best.metric.toFixed(1)} / 4).`);
+        if (!perfWorstCovered) perfLines.push(`<strong>${sourcePerf.worst.names}</strong> produces the lowest-performing hires (${sourcePerf.worst.metric.toFixed(1)} / 4).`);
+      }
+
+      const sourceLinesV2 = sourceStats.length > 0 ? [
+        bestRetTenureLine,
+        ...perfLines,
+        worstRetTenureLine,
+        combineSourceSentimentIfSame(sourceSat.best, sourceEng.best, "highest", "best"),
+        combineSourceSentimentIfSame(sourceSat.worst, sourceEng.worst, "lowest", "worst")
+      ] : ["Not enough historical hires per source (minimum 5) to compare sources yet."];
+
+      document.getElementById("sourceInsightBodyV2").innerHTML = `
+        <div class="insight-block">
+          ${sourceLinesV2.map(l => `<p class="insight-line">${l}</p>`).join("")}
+          ${sourceRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- Source (Draft 3): candidate-level action buckets, placeholder pass. Performance
+      // leads here (unlike Manager, where retention led) since Priya's stated problem is
+      // "which sources produce good hires," and source-level retention risk is something she
+      // can address directly with the candidate, unlike a manager-level retention problem.
+      const bestPerfSourceSet = new Set(sourcePerf.best.names.split(", ").filter(Boolean));
+      const worstPerfSourceSet = new Set(sourcePerf.worst.names.split(", ").filter(Boolean));
+      const worstRetSourceSet = new Set(sourceRet.worst.names.split(", ").filter(Boolean));
+      const worstTenureSourceSet = new Set(sourceTenure.worst.names.split(", ").filter(Boolean));
+
+      // Green fires on best-performance alone, red on worst-performance alone, and yellow
+      // now fires on worst-retention alone too — these are independent concerns, not a
+      // combo requirement, so a candidate can land in more than one bucket at once (e.g.
+      // best-performer whose source also retains poorly gets both the protect flag and the
+      // retention-conversation flag). Yellow's action is different in kind from a manager-level
+      // retention flag: a bad-retention manager is a structural problem vetting can't fix, but
+      // source-level retention risk often reflects the candidate's own expectations or how
+      // people from that channel typically approach the job search — something Priya can
+      // actually ask about directly, rather than something to escalate to leadership.
+      const protectCandidates = activePipeline.filter(c => bestPerfSourceSet.has(c.source));
+      const confirmRetentionCandidates = activePipeline.filter(c => worstRetSourceSet.has(c.source) || worstTenureSourceSet.has(c.source));
+      const scrutinizeSkillCandidates = activePipeline.filter(c => worstPerfSourceSet.has(c.source));
+
+      const sourceCandidateListHtml = list => list.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.source} &middot; ${c.stage}</p>`).join("");
+
+      let sourceActionHtmlV3 = "";
+      if (protectCandidates.length > 0) {
+        sourceActionHtmlV3 += `<div class="insight-recommendation">${protectCandidates.length} active candidate${protectCandidates.length === 1 ? "" : "s"} ${protectCandidates.length === 1 ? "is" : "are"} from a historically high-performing source. Prioritize follow-up so they don't go cold because statistically, this is a hire worth protecting.</div>`;
+        sourceActionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🟢 <strong>Protect and prioritize</strong></p>`;
+        sourceActionHtmlV3 += sourceCandidateListHtml(protectCandidates);
+      }
+      if (confirmRetentionCandidates.length > 0) {
+        sourceActionHtmlV3 += `<div class="insight-recommendation" style="margin-top: 10px;">${confirmRetentionCandidates.length} active candidate${confirmRetentionCandidates.length === 1 ? "" : "s"} ${confirmRetentionCandidates.length === 1 ? "is" : "are"} from a source with historically weak retention or shorter average tenure. Confirm their long-term intentions in your next follow-up or interview before finalizing the hire.</div>`;
+        sourceActionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🟡 <strong>Confirm retention intent</strong></p>`;
+        sourceActionHtmlV3 += sourceCandidateListHtml(confirmRetentionCandidates);
+      }
+      if (scrutinizeSkillCandidates.length > 0) {
+        sourceActionHtmlV3 += `<div class="insight-recommendation" style="margin-top: 10px;">${scrutinizeSkillCandidates.length} active candidate${scrutinizeSkillCandidates.length === 1 ? "" : "s"} ${scrutinizeSkillCandidates.length === 1 ? "is" : "are"} from a historically low-performing source. Scrutinize skill and competency more closely in the interview before moving forward.</div>`;
+        sourceActionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🔴 <strong>Extra scrutiny on skill</strong></p>`;
+        sourceActionHtmlV3 += sourceCandidateListHtml(scrutinizeSkillCandidates);
+      }
+      if (sourceRecommendation) {
+        // Unwrap the shared recommendation's own box so it can share one purple box with the
+        // referral-growth note below, instead of stacking two separate boxes. Each fact gets
+        // its own paragraph inside the shared box, so they read as two distinct recs, not one.
+        const concentrationText = sourceRecommendation.replace(/^<div class="insight-recommendation">/, "").replace(/<\/div>$/, "");
+        let channelBoxInner = `<p style="margin: 0 0 8px 0;">${concentrationText}</p>`;
+
+        // If the best-performing source isn't the pipeline's dominant one, flag the gap:
+        // it's an easy lever (promote that channel) rather than a candidate-level action.
+        const dominantSource = Object.keys(pipelineBySource).length > 0
+          ? Object.keys(pipelineBySource).reduce((a, b) => pipelineBySource[a] >= pipelineBySource[b] ? a : b)
+          : null;
+        if (dominantSource && !bestPerfSourceSet.has(dominantSource)) {
+          channelBoxInner += `<p style="margin: 0;"><strong>${sourcePerf.best.names}</strong> is your best-performing source historically, only ${protectCandidates.length} candidate${protectCandidates.length === 1 ? "" : "s"} ${protectCandidates.length === 1 ? "is" : "are"} currently coming through this pipeline. Consider communicating current openings to your workforce and actively promoting the referral program to grow this channel.</p>`;
+        }
+
+        sourceActionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🔵 <strong>Channel concentration</strong></p><div class="insight-recommendation">${channelBoxInner}</div>`;
+      }
+
+      document.getElementById("sourceInsightBodyV3").innerHTML = `
+        <div class="insight-block">
+          <p class="insight-line"><strong>Pipeline by source signal</strong> &mdash; active candidates bucketed by what their source historically predicts.</p>
+          ${sourceActionHtmlV3 || `<p class="insight-empty">No active candidates currently fall into a flagged source scenario.</p>`}
         </div>`;
 
       // --- Department ---
@@ -1744,11 +1886,12 @@
       }
 
       const rate = rateFn(benchmark);
+      const tenureNote = typeof benchmark.avgTenure === "number" ? `, ${benchmark.avgTenure.toFixed(1)} yrs avg tenure` : "";
       if (extremes.worst.names.split(", ").includes(dominant)) {
-        return `<div class="insight-recommendation">⚠️ ${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your weakest historical performer (${rate.toFixed(0)}%). Consider prioritizing candidates from stronger groups.</div>`;
+        return `<div class="insight-recommendation">⚠️ ${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your weakest historical retainer (${rate.toFixed(0)}% retention${tenureNote}). Consider prioritizing candidates from stronger groups.</div>`;
       }
       if (extremes.best.names.split(", ").includes(dominant)) {
-        return `<div class="insight-recommendation">✅ ${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your strongest historical performer (${rate.toFixed(0)}%). Keep investing here.</div>`;
+        return `<div class="insight-recommendation">${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your strongest historical retainer (${rate.toFixed(0)}% retention${tenureNote}). Keep investing here.</div>`;
       }
       return `<div class="insight-recommendation">${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong> (${rate.toFixed(0)}% historical retention).</div>`;
     }
