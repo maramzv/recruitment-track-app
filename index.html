@@ -665,11 +665,13 @@
 
     <div class="analytics-card" id="candidateContextCard">
       <h2>Candidate Quality Context</h2>
-      <p class="analytics-subtitle">Candidates worth a second look, plus how any specific candidate's department and source have historically performed. Groups with fewer than 5 historical hires are excluded.</p>
+      <p class="analytics-subtitle">Active candidates worth a second look, based on historical department and source performance. Groups with fewer than 5 historical hires are excluded.</p>
       <div class="insight-stack" id="candidateContextWatch"></div>
-      <div class="chart-sort-row">
+
+      <div class="chart-sort-row" style="margin-top: 20px;">
         <label for="candidateContextSelect">Candidate</label>
         <select id="candidateContextSelect" onchange="renderCandidateContext()"></select>
+        <span>&mdash; Select a name to cross-reference against historical hiring data.</span>
       </div>
       <div class="insight-stack" id="candidateContextBody"></div>
     </div>
@@ -696,19 +698,20 @@
     let followUpIndex = null;
     let sortField = null;
     let sortDirection = "asc";
+    let contextCandidateList = [];
     const STAGE_ORDER = ["Applied", "Screening", "Interview 1", "Interview 2", "Offer", "Hired", "Rejected"];
 
     // Testing-only sample data — remove before final build
     const SAMPLE_CANDIDATES = [
       { name: "Elena Vasquez", role: "IT Support", department: "IT/IS", stage: "Screening", email: "elena.vasquez@email.com", phone: "555-201-4471", source: "LinkedIn", lastContact: "2026-07-17", notes: "" },
-      { name: "Malik Johnson", role: "Quality Control Inspector", department: "Production", stage: "Interview 1", email: "malik.johnson@email.com", phone: "555-330-2298", source: "Indeed", lastContact: "2026-08-01", notes: "" },
+      { name: "Malik Johnson", role: "Quality Control Inspector", department: "Production", stage: "Interview 1", email: "malik.johnson@email.com", phone: "555-330-2298", source: "Google Search", lastContact: "2026-08-01", notes: "" },
       { name: "Amanda Clark", role: "Cloud Applications Engineer", department: "Software Engineering", stage: "Interview 2", email: "amanda.clark@email.com", phone: "555-118-7743", source: "Google Search", lastContact: "2026-07-22", notes: "Waiting on take-home assessment results." },
       { name: "Ravi Patel", role: "Database Administrator", department: "IT/IS", stage: "Applied", email: "ravi.patel@email.com", phone: "555-475-3382", source: "Employee Referral", lastContact: "2026-07-24", notes: "" },
-      { name: "Owen Mitchell", role: "Regional Sales Director", department: "Sales", stage: "Screening", email: "owen.mitchell@email.com", phone: "555-902-5510", source: "Diversity Job Fair", lastContact: "2026-07-16", notes: "" },
+      { name: "Owen Mitchell", role: "Regional Sales Director", department: "Sales", stage: "Screening", email: "owen.mitchell@email.com", phone: "555-902-5510", source: "Website", lastContact: "2026-07-16", notes: "" },
       { name: "Grace Kim", role: "Executive Assistant to the CEO", department: "Executive Office", stage: "Offer", email: "grace.kim@email.com", phone: "555-611-8804", source: "Website", lastContact: "2026-08-02", notes: "Offer sent, awaiting response." },
       { name: "Diego Fernandez", role: "Full Stack Software Engineer", department: "Software Engineering", stage: "Interview 1", email: "diego.fernandez@email.com", phone: "555-284-9012", source: "CareerBuilder", lastContact: "2026-07-31", notes: "" },
       { name: "Natalie Brooks", role: "Sr. Accountant", department: "Admin Offices", stage: "Interview 2", email: "natalie.brooks@email.com", phone: "555-559-6631", source: "Website", lastContact: "2026-07-28", notes: "Strong technical interview, waiting on manager feedback." },
-      { name: "Andre Coleman", role: "Network Engineer", department: "IT/IS", stage: "Screening", email: "andre.coleman@email.com", phone: "555-773-1290", source: "Website", lastContact: "2026-07-29", notes: "" },
+      { name: "Andre Coleman", role: "Network Engineer", department: "IT/IS", stage: "Screening", email: "andre.coleman@email.com", phone: "555-773-1290", source: "Diversity Job Fair", lastContact: "2026-07-29", notes: "" },
       { name: "Hannah Whitfield", role: "Production Manager", department: "Production", stage: "Applied", email: "hannah.whitfield@email.com", phone: "555-820-4456", source: "LinkedIn", lastContact: "2026-07-29", notes: "" },
       { name: "Miguel Santos", role: "Strategic Accounts Sales Manager", department: "Sales", stage: "Rejected", email: "miguel.santos@email.com", phone: "555-347-6612", source: "Employee Referral", lastContact: "2026-08-03", notes: "Not a fit for current opening." },
       { name: "Darnell Jefferson", role: "Quality Control Inspector", department: "Production", stage: "Hired", email: "darnell.jefferson@email.com", phone: "555-905-2287", source: "Indeed", lastContact: "2026-07-27", notes: "Accepted offer, waiting on signed paperwork and onboarding confirmation before start date." }
@@ -1619,27 +1622,32 @@
           ${watchHtml}
         </div>`;
 
+      // All candidates, active and past (Hired/Rejected tagged in the option label),
+      // sorted A-Z by name for easy lookup.
+      const hiredOrRejected = candidates.filter(c => c.stage === "Hired" || c.stage === "Rejected");
+      contextCandidateList = [...activePipeline, ...hiredOrRejected].sort((a, b) => a.name.localeCompare(b.name));
+
       const contextSelect = document.getElementById("candidateContextSelect");
       const previousSelection = contextSelect.value;
-      contextSelect.innerHTML = activePipeline.length > 0
-        ? activePipeline.map((c, i) => `<option value="${i}">${c.name} — ${c.role || c.department}</option>`).join("")
-        : `<option value="">No active candidates</option>`;
-      if (previousSelection && activePipeline[previousSelection]) contextSelect.value = previousSelection;
+      contextSelect.innerHTML = contextCandidateList.length > 0
+        ? contextCandidateList.map((c, i) => `<option value="${i}">${c.name} — ${c.role || c.department} (${c.stage})</option>`).join("")
+        : `<option value="">No candidates</option>`;
+      if (previousSelection && contextCandidateList[previousSelection]) contextSelect.value = previousSelection;
       renderCandidateContext();
     }
 
     // Builds the per-candidate Quality Context card: how the candidate's source and
     // department have historically performed, joined the same way as the Source/Department
-    // insight cards above, just narrowed to one candidate instead of aggregated.
+    // insight cards above, just narrowed to one candidate instead of aggregated. Draws from
+    // contextCandidateList (active pipeline first, then Hired/Rejected) built in renderIntelligence.
     function renderCandidateContext() {
       const MIN_SAMPLE = 5;
-      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
       const select = document.getElementById("candidateContextSelect");
       const body = document.getElementById("candidateContextBody");
-      const candidate = activePipeline[select.value];
+      const candidate = contextCandidateList[select.value];
 
       if (!candidate) {
-        body.innerHTML = `<div class="insight-block"><p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see quality context here.</p></div>`;
+        body.innerHTML = `<div class="insight-block"><p class="insight-empty">No candidates yet — add or load candidates to see quality context here.</p></div>`;
         return;
       }
 
@@ -1658,20 +1666,19 @@
         lines.push(`<strong>${candidate.department}</strong> doesn't have enough historical hires (minimum 5) to benchmark yet.`);
       }
 
-      let matchHtml = `<p class="insight-empty">Not enough historical data on this department and source combination to compute a match score yet.</p>`;
+      let riskHtml = `<p class="insight-empty">Not enough historical data on this department and source combination to estimate retention risk yet.</p>`;
       if (sourceStats && deptStats) {
         const matchScore = (sourceStats.retentionRate + deptStats.retentionRate) / 2;
+        const riskLabel = matchScore >= 70 ? "Low Risk" : matchScore >= 50 ? "Moderate Risk" : "High Risk";
         const tone = matchScore >= 70 ? "✅" : matchScore >= 50 ? "⚠️" : "🔴";
-        matchHtml = `<div class="insight-recommendation">${tone} <strong>Historic match score: ${matchScore.toFixed(0)}%</strong> — average of this source's and this department's historical retention rates.</div>`;
+        riskHtml = `<div class="insight-recommendation">${tone} Historically, candidates from <strong>${candidate.source}</strong> going into <strong>${candidate.department}</strong> lean <strong>${riskLabel}</strong> for retention (${matchScore.toFixed(0)}% avg. of ${sourceStats.retentionRate.toFixed(0)}% source retention and ${deptStats.retentionRate.toFixed(0)}% department retention).</div>`;
       }
 
       body.innerHTML = `
         <div class="insight-block">
-          <p class="insight-line"><strong>${candidate.name}</strong> — ${candidate.role || "Role not set"} (${candidate.department})</p>
+          <p class="insight-line"><strong>${candidate.name}</strong> — ${candidate.role || "Role not set"} (${candidate.department}) &middot; <em>${candidate.stage}</em></p>
           ${lines.map(l => `<p class="insight-line">${l}</p>`).join("")}
-        </div>
-        <div class="insight-block">
-          ${matchHtml}
+          ${riskHtml}
         </div>`;
     }
 
