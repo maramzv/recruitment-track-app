@@ -686,20 +686,8 @@
 
     <div class="analytics-card" id="managerInsightCard">
       <h2>Manager Insights</h2>
-      <p class="analytics-subtitle">Which managers retain and develop talent best historically, and which departments in your active pipeline fall under them.</p>
+      <p class="analytics-subtitle">Which managers retain and develop talent best historically, and what to do about it for active candidates headed into their departments.</p>
       <div class="insight-stack" id="managerInsightBody"></div>
-    </div>
-
-    <div class="analytics-card" id="managerInsightCardV2">
-      <h2>Manager Insights (Draft 2 &mdash; stage-aware)</h2>
-      <p class="analytics-subtitle">Same manager comparison, but the territory breakdown only escalates to a recommendation when a candidate is at Offer stage in a historically weak-retention manager's territory. Earlier-stage candidates are shown for visibility only.</p>
-      <div class="insight-stack" id="managerInsightBodyV2"></div>
-    </div>
-
-    <div class="analytics-card" id="managerInsightCardV3">
-      <h2>Manager Insights (Draft 3 &mdash; actionable both ways)</h2>
-      <p class="analytics-subtitle">Same manager comparison, but the territory breakdown gives a real next step either direction: extra scrutiny for weak-retention territory, a selling point for strong-retention territory.</p>
-      <div class="insight-stack" id="managerInsightBodyV3"></div>
     </div>
   </div>
 
@@ -1605,49 +1593,43 @@
           ${deptRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
         </div>`;
 
-      // --- Manager Insights ---
+      // --- Manager Insights: two-directional action. Retention line pluralizes correctly
+      // for tied managers; performance/satisfaction merge into one sentence only when the
+      // same manager(s) actually win both (via combineIfSame), never assumed. Candidates
+      // don't have a manager field, so we connect through department (each manager's
+      // historical departments, from getTeamStats). Both the strongest and weakest
+      // territory get a real next step, not just a risk flag.
       const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE);
       const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
       const teamPerf = pickExtreme(teamStats, t => t.avgPerformance, t => t.managerName);
       const teamSat = pickExtreme(teamStats, t => t.avgSatisfaction, t => t.managerName);
 
+      const worstIsPlural = teamRet.worst.names.includes(", ");
+      const bestIsPlural = teamRet.best.names.includes(", ");
       const managerLines = teamStats.length > 0 ? [
-        `<strong>${teamRet.best.names}</strong> retains talent best among managers (${teamRet.best.metric.toFixed(0)}%), while <strong>${teamRet.worst.names}</strong> retains the least (${teamRet.worst.metric.toFixed(0)}%).`,
-        `By performance, <strong>${teamPerf.best.names}</strong>'s team rates highest (${teamPerf.best.metric.toFixed(1)} / 4), and <strong>${teamPerf.worst.names}</strong>'s rates lowest (${teamPerf.worst.metric.toFixed(1)} / 4).`,
-        `By satisfaction, <strong>${teamSat.best.names}</strong>'s team rates highest (${teamSat.best.metric.toFixed(1)} / 5), and <strong>${teamSat.worst.names}</strong>'s rates lowest (${teamSat.worst.metric.toFixed(1)} / 5).`
+        `<strong>${teamRet.best.names}</strong> ${bestIsPlural ? "retain" : "retains"} talent best among managers (${teamRet.best.metric.toFixed(0)}%), while <strong>${teamRet.worst.names}</strong> ${worstIsPlural ? "retain" : "retains"} the least (${teamRet.worst.metric.toFixed(0)}%).`,
+        combineIfSame(teamPerf.best, teamSat.best, "highest"),
+        combineIfSame(teamPerf.worst, teamSat.worst, "lowest")
       ] : ["Not enough historical hires per manager (minimum 5) to compare managers yet."];
 
-      // Department-linked breakdown: candidates don't have a manager field, so we connect
-      // through department (each manager's historical departments, from getTeamStats) to name
-      // which active candidates are headed into the strongest/weakest retaining manager's territory.
-      let territoryRecommendation = "";
-      let territoryDetail = "";
+      let managerActionHtml = "";
       if (teamStats.length > 0) {
         const bestManagerNames = teamRet.best.names.split(", ").filter(Boolean);
         const worstManagerNames = teamRet.worst.names.split(", ").filter(Boolean);
-        const bestDepts = new Set(teamStats.filter(t => bestManagerNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const worstDepts = new Set(teamStats.filter(t => worstManagerNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const candidatesToBest = activePipeline.filter(c => bestDepts.has(c.department));
-        const candidatesToWorst = activePipeline.filter(c => worstDepts.has(c.department));
+        const bestManagerDepts = new Set(teamStats.filter(t => bestManagerNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
+        const worstManagerDepts = new Set(teamStats.filter(t => worstManagerNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
+        const candidatesToBestManager = activePipeline.filter(c => bestManagerDepts.has(c.department));
+        const candidatesToWorstManager = activePipeline.filter(c => worstManagerDepts.has(c.department));
 
-        const summaryParts = [];
-        if (candidatesToBest.length > 0) {
-          summaryParts.push(`${candidatesToBest.length} active candidate${candidatesToBest.length === 1 ? "" : "s"} ${candidatesToBest.length === 1 ? "is" : "are"} headed into a department overseen by <strong>${bestManagerNames.join(", ")}</strong>, your strongest historical retainer.`);
+        if (candidatesToBestManager.length > 0) {
+          managerActionHtml += `<div class="insight-recommendation">${candidatesToBestManager.length} active candidate${candidatesToBestManager.length === 1 ? "" : "s"} ${candidatesToBestManager.length === 1 ? "is" : "are"} headed into a department overseen by your strongest historical retainer. Use it as a selling point: lead with this team's retention and performance numbers if the candidate is weighing competing offers.</div>`;
+          managerActionHtml += `<p class="insight-line" style="margin-top: 10px;">🟢 <strong>Strongest manager's territory</strong> — ${bestManagerNames.join(", ")}</p>`;
+          managerActionHtml += candidatesToBestManager.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
         }
-        if (candidatesToWorst.length > 0) {
-          summaryParts.push(`${candidatesToWorst.length} ${candidatesToWorst.length === 1 ? "is" : "are"} headed into a department overseen by <strong>${worstManagerNames.join(", ")}</strong>, your weakest historical retainer.`);
-        }
-        if (summaryParts.length > 0) {
-          territoryRecommendation = `<div class="insight-recommendation">${summaryParts.join(" ")}</div>`;
-        }
-
-        if (candidatesToBest.length > 0) {
-          territoryDetail += `<p class="insight-line" style="margin-top: 10px;">🟢 <strong>Strongest manager's territory</strong> — ${bestManagerNames.join(", ")}</p>`;
-          territoryDetail += candidatesToBest.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department}</p>`).join("");
-        }
-        if (candidatesToWorst.length > 0) {
-          territoryDetail += `<p class="insight-line" style="margin-top: 10px;">🔴 <strong>Weakest manager's territory</strong> — ${worstManagerNames.join(", ")}</p>`;
-          territoryDetail += candidatesToWorst.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department}</p>`).join("");
+        if (candidatesToWorstManager.length > 0) {
+          managerActionHtml += `<div class="insight-recommendation" style="margin-top: 10px;">${candidatesToWorstManager.length} active candidate${candidatesToWorstManager.length === 1 ? "" : "s"} ${candidatesToWorstManager.length === 1 ? "is" : "are"} headed into a department overseen by your weakest historical retainer. Treat this hire with extra scrutiny: confirm with the manager that they're a strong match on skill, team fit, and motivation, so this doesn't repeat the pattern.</div>`;
+          managerActionHtml += `<p class="insight-line" style="margin-top: 10px;">🔴 <strong>Weakest manager's territory</strong> — ${worstManagerNames.join(", ")}</p>`;
+          managerActionHtml += candidatesToWorstManager.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
         }
       }
 
@@ -1656,90 +1638,8 @@
           ${managerLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
         </div>
         <div class="insight-block">
-          <p class="insight-line"><strong>Pipeline by manager territory</strong> — active candidates headed into departments overseen by your strongest or weakest retaining manager.</p>
-          ${territoryRecommendation || `<p class="insight-empty">No active candidates are currently headed into departments overseen by your strongest or weakest retaining managers.</p>`}
-          ${territoryDetail}
-        </div>`;
-
-      // --- Manager Insights (Draft 2): stage-aware version. Reuses teamStats/teamRet/
-      // bestDepts/worstDepts computed above. Early-stage candidates are shown for visibility
-      // only (no recommendation styling). The one actionable flag fires only when a candidate
-      // is at Offer stage in the weakest-retention manager's territory, since that's the actual
-      // decision point, not a judgment on the candidate.
-      let territoryDetailV2 = "";
-      let offerFlagsV2 = "";
-      if (teamStats.length > 0) {
-        const bestManagerNamesV2 = teamRet.best.names.split(", ").filter(Boolean);
-        const worstManagerNamesV2 = teamRet.worst.names.split(", ").filter(Boolean);
-        const bestDeptsV2 = new Set(teamStats.filter(t => bestManagerNamesV2.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const worstDeptsV2 = new Set(teamStats.filter(t => worstManagerNamesV2.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const candidatesToBestV2 = activePipeline.filter(c => bestDeptsV2.has(c.department));
-        const candidatesToWorstV2 = activePipeline.filter(c => worstDeptsV2.has(c.department));
-        const worstOfferV2 = candidatesToWorstV2.filter(c => c.stage === "Offer");
-
-        offerFlagsV2 = worstOfferV2.map(c => `<div class="insight-recommendation">🔶 <strong>${c.name}</strong> is at Offer stage for a role under <strong>${worstManagerNamesV2.join(", ")}</strong>, whose team has historically retained only ${teamRet.worst.metric.toFixed(0)}% of hires. Worth raising with the hiring manager or HR before the offer is finalized.</div>`).join("");
-
-        if (candidatesToBestV2.length > 0) {
-          territoryDetailV2 += `<p class="insight-line" style="margin-top: 10px;"><strong>Strongest manager's territory</strong> — ${bestManagerNamesV2.join(", ")}</p>`;
-          territoryDetailV2 += candidatesToBestV2.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
-        }
-        if (candidatesToWorstV2.length > 0) {
-          territoryDetailV2 += `<p class="insight-line" style="margin-top: 10px;"><strong>Weakest manager's territory</strong> — ${worstManagerNamesV2.join(", ")}</p>`;
-          territoryDetailV2 += candidatesToWorstV2.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
-        }
-      }
-
-      document.getElementById("managerInsightBodyV2").innerHTML = `
-        <div class="insight-block">
-          ${managerLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
-        </div>
-        <div class="insight-block">
           <p class="insight-line"><strong>Pipeline by manager territory</strong> — where active candidates fall, by manager retention history.</p>
-          ${offerFlagsV2}
-          ${territoryDetailV2 || `<p class="insight-empty">No active candidates are currently headed into departments overseen by your strongest or weakest retaining managers.</p>`}
-        </div>`;
-
-      // --- Manager Insights (Draft 3): two-directional action. Reuses teamStats/teamRet/
-      // teamPerf/teamSat computed above. Retention line pluralizes correctly for tied
-      // managers; performance/satisfaction merge into one sentence only when the same
-      // manager(s) actually win both (via combineIfSame), never assumed. Both the
-      // strongest and weakest territory get a real next step, not just a risk flag.
-      const worstIsPluralV3 = teamRet.worst.names.includes(", ");
-      const bestIsPluralV3 = teamRet.best.names.includes(", ");
-      const managerLinesV3 = teamStats.length > 0 ? [
-        `<strong>${teamRet.best.names}</strong> ${bestIsPluralV3 ? "retain" : "retains"} talent best among managers (${teamRet.best.metric.toFixed(0)}%), while <strong>${teamRet.worst.names}</strong> ${worstIsPluralV3 ? "retain" : "retains"} the least (${teamRet.worst.metric.toFixed(0)}%).`,
-        combineIfSame(teamPerf.best, teamSat.best, "highest"),
-        combineIfSame(teamPerf.worst, teamSat.worst, "lowest")
-      ] : ["Not enough historical hires per manager (minimum 5) to compare managers yet."];
-
-      let actionHtmlV3 = "";
-      if (teamStats.length > 0) {
-        const bestManagerNamesV3 = teamRet.best.names.split(", ").filter(Boolean);
-        const worstManagerNamesV3 = teamRet.worst.names.split(", ").filter(Boolean);
-        const bestDeptsV3 = new Set(teamStats.filter(t => bestManagerNamesV3.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const worstDeptsV3 = new Set(teamStats.filter(t => worstManagerNamesV3.includes(t.managerName)).flatMap(t => t.departments.split(", ")));
-        const candidatesToBestV3 = activePipeline.filter(c => bestDeptsV3.has(c.department));
-        const candidatesToWorstV3 = activePipeline.filter(c => worstDeptsV3.has(c.department));
-
-        if (candidatesToBestV3.length > 0) {
-          actionHtmlV3 += `<div class="insight-recommendation">${candidatesToBestV3.length} active candidate${candidatesToBestV3.length === 1 ? "" : "s"} ${candidatesToBestV3.length === 1 ? "is" : "are"} headed into a department overseen by your strongest historical retainer. Use it as a selling point: lead with this team's retention and performance numbers if the candidate is weighing competing offers.</div>`;
-          actionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🟢 <strong>Strongest manager's territory</strong> — ${bestManagerNamesV3.join(", ")}</p>`;
-          actionHtmlV3 += candidatesToBestV3.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
-        }
-        if (candidatesToWorstV3.length > 0) {
-          actionHtmlV3 += `<div class="insight-recommendation" style="margin-top: 10px;">${candidatesToWorstV3.length} active candidate${candidatesToWorstV3.length === 1 ? "" : "s"} ${candidatesToWorstV3.length === 1 ? "is" : "are"} headed into a department overseen by your weakest historical retainer. Treat this hire with extra scrutiny: confirm with the manager that they're a strong match on skill, team fit, and motivation, so this doesn't repeat the pattern.</div>`;
-          actionHtmlV3 += `<p class="insight-line" style="margin-top: 10px;">🔴 <strong>Weakest manager's territory</strong> — ${worstManagerNamesV3.join(", ")}</p>`;
-          actionHtmlV3 += candidatesToWorstV3.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
-        }
-      }
-
-      document.getElementById("managerInsightBodyV3").innerHTML = `
-        <div class="insight-block">
-          ${managerLinesV3.map(l => `<p class="insight-line">${l}</p>`).join("")}
-        </div>
-        <div class="insight-block">
-          <p class="insight-line"><strong>Pipeline by manager territory</strong> — where active candidates fall, by manager retention history.</p>
-          ${actionHtmlV3 || `<p class="insight-empty">No active candidates are currently headed into departments overseen by your strongest or weakest retaining managers.</p>`}
+          ${managerActionHtml || `<p class="insight-empty">No active candidates are currently headed into departments overseen by your strongest or weakest retaining managers.</p>`}
         </div>`;
 
       // --- Candidate Quality Context: auto-flagged watch list + selector ---
