@@ -137,11 +137,13 @@
     .salary-range-avg-marker { position: absolute; top: -4px; width: 3px; height: 22px; background: #6c5ce7; border-radius: 2px; }
 
     /* Hiring Intelligence */
-    .placeholder-note { border: 1px dashed #ccc; border-radius: 6px; padding: 20px; color: #999; font-size: 13px; text-align: center; }
-    .insight-tag-filters { display: flex; gap: 8px; margin: 12px 0 16px 0; flex-wrap: wrap; }
-    .placeholder-stack { display: flex; flex-direction: column; gap: 10px; }
-    .placeholder-grid { display: flex; gap: 15px; flex-wrap: wrap; }
-    .placeholder-grid .placeholder-note { flex: 1; min-width: 160px; }
+    .insight-stack { display: flex; flex-direction: column; gap: 14px; }
+    .insight-block { border: 1px solid #eee; border-radius: 6px; padding: 16px; }
+    .insight-line { color: #333; font-size: 14px; margin: 0 0 8px 0; line-height: 1.5; }
+    .insight-line:last-child { margin-bottom: 0; }
+    .insight-line strong { color: #111; }
+    .insight-recommendation { background: #f0ebff; border-left: 3px solid #6c5ce7; padding: 8px 12px; border-radius: 4px; color: #4a3f8c; font-size: 13px; margin-top: 10px; }
+    .insight-empty { color: #999; font-size: 13px; text-align: center; padding: 12px; }
 
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
@@ -399,14 +401,6 @@
     <p class="kpi-group-label">Benchmarks</p>
     <div class="kpi-row" id="kpiRowTrends"></div>
 
-    <p class="kpi-group-label">Retention Comparison</p>
-    <p class="analytics-subtitle">Groups with fewer than 5 hires are excluded to avoid small-sample bias. Full numbers are in the tables below.</p>
-    <div class="kpi-row" id="kpiRowComparison"></div>
-
-    <p class="kpi-group-label">Performance Comparison</p>
-    <p class="analytics-subtitle">Ranked by manager-rated performance score, not retention. Groups with fewer than 5 hires are excluded.</p>
-    <div class="kpi-row" id="kpiRowPerformanceComparison"></div>
-
     <div class="analytics-card" id="sourceCard">
       <div class="card-header-row">
         <div>
@@ -663,52 +657,22 @@
   </div>
 
   <div class="tab-panel" id="tab-intelligence">
-    <div class="analytics-card" id="headlineCard">
-      <h2>Top Insight</h2>
-      <p class="analytics-subtitle">Always-on headline pulled from historical data. Never blank, no candidate data required.</p>
-      <div class="placeholder-stack">
-        <div class="placeholder-note">Strongest source overall</div>
-        <div class="placeholder-note">Strongest department overall</div>
-        <div class="placeholder-note">Strongest source + department combination</div>
-      </div>
+    <div class="analytics-card" id="sourceInsightCard">
+      <h2>Source Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">What each recruiting channel has actually produced historically, read against who's in your pipeline right now. Groups with fewer than 5 historical hires are excluded to avoid small-sample bias.</p>
+      <div class="insight-stack" id="sourceInsightBody"></div>
     </div>
 
-    <div class="analytics-card" id="pipelineMixCard">
-      <h2>Pipeline Mix</h2>
-      <p class="analytics-subtitle">How your current candidates, as a group, compare to historical source and department performance.</p>
-      <div class="placeholder-stack">
-        <div class="placeholder-note">% of pipeline from above vs. below average sources</div>
-        <div class="placeholder-note">% of pipeline from above vs. below average departments</div>
-      </div>
+    <div class="analytics-card" id="departmentInsightCard">
+      <h2>Department Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Which departments hire and retain well historically, read against where your active candidates are headed. Groups with fewer than 5 historical hires are excluded.</p>
+      <div class="insight-stack" id="departmentInsightBody"></div>
     </div>
 
-    <div class="analytics-card" id="candidateMatchCard">
-      <h2>Candidates Worth Watching</h2>
-      <p class="analytics-subtitle">Pipeline candidates whose department and source combination stands out historically, for better or worse.</p>
-      <div class="placeholder-stack">
-        <div class="placeholder-note">Example flagged candidate card (department + source outlier, good or bad)</div>
-        <div class="placeholder-note">Empty state shown when no current candidates qualify</div>
-      </div>
-    </div>
-
-    <div class="analytics-card" id="insightLibraryCard">
-      <h2>Hiring Patterns</h2>
-      <p class="analytics-subtitle">Auto-generated insights from the historical dataset, tagged and filterable.</p>
-      <div class="insight-tag-filters">
-        <button class="view-toggle-btn active">All</button>
-        <button class="view-toggle-btn">Source</button>
-        <button class="view-toggle-btn">Department</button>
-        <button class="view-toggle-btn">Manager</button>
-        <button class="view-toggle-btn">Combo</button>
-        <button class="view-toggle-btn">Pattern</button>
-      </div>
-      <div class="placeholder-grid">
-        <div class="placeholder-note">Source example<br>e.g. best/worst performing source</div>
-        <div class="placeholder-note">Department example<br>e.g. best/worst performing department</div>
-        <div class="placeholder-note">Manager example<br>e.g. top retaining manager</div>
-        <div class="placeholder-note">Combo example<br>e.g. best source per department</div>
-        <div class="placeholder-note">Pattern example<br>e.g. tenure by hire quarter, absences vs. performance</div>
-      </div>
+    <div class="analytics-card" id="generalInsightCard">
+      <h2>General Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Cross-cutting takeaways — manager performance and pipeline candidates whose department + source combination stands out historically, for better or worse.</p>
+      <div class="insight-stack" id="generalInsightBody"></div>
     </div>
   </div>
 
@@ -995,6 +959,7 @@
           </tr>`;
       });
       renderAlerts(candidates);
+      renderIntelligence();
     }
 
     function getTenureYears(dateOfHire, dateOfTermination) {
@@ -1502,35 +1467,6 @@
       const active = employees.filter(e => e.employmentStatus === "Active").length;
       const activePct = (active / totalEmployees) * 100;
 
-      const MIN_SAMPLE_SIZE = 5;
-
-      // Picks the extreme (highest/lowest) group(s) for a metric. When multiple groups
-      // are exactly tied at the extreme, all of their names are joined rather than
-      // silently picking whichever sorts first.
-      function pickExtreme(stats, metricFn, nameFn) {
-        const values = stats.map(metricFn);
-        const max = Math.max(...values);
-        const min = Math.min(...values);
-        const join = list => list.map(nameFn).join(", ");
-        return {
-          best: { names: join(stats.filter(s => metricFn(s) === max)), metric: max },
-          worst: { names: join(stats.filter(s => metricFn(s) === min)), metric: min }
-        };
-      }
-
-      const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE_SIZE);
-      const deptRet = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
-      const deptPerf = pickExtreme(deptStats, d => d.avgPerformance, d => d.department);
-
-      const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE_SIZE);
-      const sourceRate = s => (s.active / s.hired) * 100;
-      const sourceRet = pickExtreme(sourceStats, sourceRate, s => s.source);
-      const sourcePerf = pickExtreme(sourceStats, s => s.avgPerformance, s => s.source);
-
-      const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE_SIZE);
-      const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
-      const teamPerf = pickExtreme(teamStats, t => t.avgPerformance, t => t.managerName);
-
       const avgTenure = average(employees.map(e => getTenureYears(e.dateOfHire, e.dateOfTermination)));
       const topReason = getTurnoverReasons()[0];
       const avgPerformanceOverall = average(employees.map(e => e.performanceScoreValue));
@@ -1547,24 +1483,6 @@
         { label: "Recruiting Sources", value: sourceCount }
       ]);
 
-      renderKpiRow("kpiRowComparison", [
-        { label: "Strongest Dept.", value: deptRet.best.names, sub: `${deptRet.best.metric.toFixed(0)}% retention` },
-        { label: "Strongest Source", value: sourceRet.best.names, sub: `${sourceRet.best.metric.toFixed(0)}% retention` },
-        { label: "Strongest Manager", value: teamRet.best.names, sub: `${teamRet.best.metric.toFixed(0)}% retention` },
-        { label: "Weakest Dept.", value: deptRet.worst.names, sub: `${deptRet.worst.metric.toFixed(0)}% retention` },
-        { label: "Weakest Source", value: sourceRet.worst.names, sub: `${sourceRet.worst.metric.toFixed(0)}% retention` },
-        { label: "Weakest Manager", value: teamRet.worst.names, sub: `${teamRet.worst.metric.toFixed(0)}% retention` }
-      ]);
-
-      renderKpiRow("kpiRowPerformanceComparison", [
-        { label: "Top Dept.", value: deptPerf.best.names, sub: `${deptPerf.best.metric.toFixed(1)} / 4 performance` },
-        { label: "Top Source", value: sourcePerf.best.names, sub: `${sourcePerf.best.metric.toFixed(1)} / 4 performance` },
-        { label: "Top Manager", value: teamPerf.best.names, sub: `${teamPerf.best.metric.toFixed(1)} / 4 performance` },
-        { label: "Bottom Dept.", value: deptPerf.worst.names, sub: `${deptPerf.worst.metric.toFixed(1)} / 4 performance` },
-        { label: "Bottom Source", value: sourcePerf.worst.names, sub: `${sourcePerf.worst.metric.toFixed(1)} / 4 performance` },
-        { label: "Bottom Manager", value: teamPerf.worst.names, sub: `${teamPerf.worst.metric.toFixed(1)} / 4 performance` }
-      ]);
-
       renderKpiRow("kpiRowTrends", [
         { label: "Performance Score", value: `${avgPerformanceOverall.toFixed(1)} / 4`, sub: "manager-rated work quality" },
         { label: "Meeting Expectations", value: `${meetingOrExceedingPct.toFixed(0)}%`, sub: "% rated Fully Meets or Exceeds" },
@@ -1573,6 +1491,144 @@
         { label: "Avg Tenure", value: `${avgTenure.toFixed(1)} yrs` },
         { label: "Most Common Exit Reason", value: topReason.reason, sub: `${topReason.pct.toFixed(0)}% of departures` }
       ]);
+    }
+
+    // Picks the extreme (highest/lowest) group(s) for a metric. When multiple groups
+    // are exactly tied at the extreme, all of their names are joined rather than
+    // silently picking whichever sorts first.
+    function pickExtreme(stats, metricFn, nameFn) {
+      const values = stats.map(metricFn);
+      const max = Math.max(...values);
+      const min = Math.min(...values);
+      const join = list => list.map(nameFn).join(", ");
+      return {
+        best: { names: join(stats.filter(s => metricFn(s) === max)), metric: max },
+        worst: { names: join(stats.filter(s => metricFn(s) === min)), metric: min }
+      };
+    }
+
+    function countBy(list, field) {
+      const counts = {};
+      list.forEach(item => {
+        const key = item[field];
+        if (!key) return;
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      return counts;
+    }
+
+    // Renders the Hiring Intelligence tab: historical insight + recommendation, per section,
+    // read against the live pipeline. Never repeats the raw tables/charts from Workforce Analytics.
+    function renderIntelligence() {
+      const MIN_SAMPLE = 5;
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+
+      // --- Source ---
+      const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE);
+      const sourceLookup = {};
+      sourceStats.forEach(s => { sourceLookup[s.source] = s; });
+      const sourceRet = pickExtreme(sourceStats, s => (s.active / s.hired) * 100, s => s.source);
+      const sourcePerf = pickExtreme(sourceStats, s => s.avgPerformance, s => s.source);
+      const pipelineBySource = countBy(activePipeline, "source");
+
+      const sourceLines = sourceStats.length > 0 ? [
+        `<strong>${sourceRet.best.names}</strong> has the strongest historical retention (${sourceRet.best.metric.toFixed(0)}%), while <strong>${sourceRet.worst.names}</strong> has the weakest (${sourceRet.worst.metric.toFixed(0)}%).`,
+        `By performance, <strong>${sourcePerf.best.names}</strong> produces the highest-rated hires (${sourcePerf.best.metric.toFixed(1)} / 4), and <strong>${sourcePerf.worst.names}</strong> the lowest (${sourcePerf.worst.metric.toFixed(1)} / 4).`
+      ] : ["Not enough historical hires per source (minimum 5) to compare sources yet."];
+
+      const sourceRecommendation = buildMixRecommendation(pipelineBySource, activePipeline.length, sourceLookup, sourceRet,
+        s => (s.active / s.hired) * 100);
+
+      document.getElementById("sourceInsightBody").innerHTML = `
+        <div class="insight-block">
+          ${sourceLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
+          ${sourceRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- Department ---
+      const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE);
+      const deptLookup = {};
+      deptStats.forEach(d => { deptLookup[d.department] = d; });
+      const deptRet = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
+      const deptPerf = pickExtreme(deptStats, d => d.avgPerformance, d => d.department);
+      const pipelineByDept = countBy(activePipeline, "department");
+
+      const deptLines = deptStats.length > 0 ? [
+        `<strong>${deptRet.best.names}</strong> has the strongest historical retention (${deptRet.best.metric.toFixed(0)}%), while <strong>${deptRet.worst.names}</strong> has the weakest (${deptRet.worst.metric.toFixed(0)}%).`,
+        `By performance, <strong>${deptPerf.best.names}</strong> rates highest (${deptPerf.best.metric.toFixed(1)} / 4), and <strong>${deptPerf.worst.names}</strong> rates lowest (${deptPerf.worst.metric.toFixed(1)} / 4).`
+      ] : ["Not enough historical hires per department (minimum 5) to compare departments yet."];
+
+      const deptRecommendation = buildMixRecommendation(pipelineByDept, activePipeline.length, deptLookup, deptRet,
+        d => d.retentionRate);
+
+      document.getElementById("departmentInsightBody").innerHTML = `
+        <div class="insight-block">
+          ${deptLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
+          ${deptRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- General: managers + department/source combo outliers ---
+      const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE);
+      const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
+      const teamPerf = pickExtreme(teamStats, t => t.avgPerformance, t => t.managerName);
+
+      const managerLines = teamStats.length > 0 ? [
+        `<strong>${teamRet.best.names}</strong> retains talent best among managers (${teamRet.best.metric.toFixed(0)}%), while <strong>${teamRet.worst.names}</strong> retains the least (${teamRet.worst.metric.toFixed(0)}%).`,
+        `By performance, <strong>${teamPerf.best.names}</strong>'s team rates highest (${teamPerf.best.metric.toFixed(1)} / 4), and <strong>${teamPerf.worst.names}</strong>'s rates lowest (${teamPerf.worst.metric.toFixed(1)} / 4).`
+      ] : ["Not enough historical hires per manager (minimum 5) to compare managers yet."];
+
+      const deptBestSet = new Set(deptRet.best.names.split(", ").filter(Boolean));
+      const deptWorstSet = new Set(deptRet.worst.names.split(", ").filter(Boolean));
+      const sourceBestSet = new Set(sourceRet.best.names.split(", ").filter(Boolean));
+      const sourceWorstSet = new Set(sourceRet.worst.names.split(", ").filter(Boolean));
+
+      const flagged = activePipeline.map(c => {
+        if (deptBestSet.has(c.department) && sourceBestSet.has(c.source)) {
+          return { c, tone: "positive", reason: `${c.department} and ${c.source} are both top historical performers on retention` };
+        }
+        if (deptWorstSet.has(c.department) && sourceWorstSet.has(c.source)) {
+          return { c, tone: "risk", reason: `${c.department} and ${c.source} both rank at the bottom historically on retention` };
+        }
+        return null;
+      }).filter(Boolean);
+
+      const watchHtml = flagged.length > 0
+        ? flagged.map(f => `<p class="insight-line">${f.tone === "positive" ? "🟢" : "🔴"} <strong>${f.c.name}</strong> (${f.c.role || f.c.department}) — ${f.reason}.</p>`).join("")
+        : `<p class="insight-empty">No active candidates currently sit at a department + source combination that stands out historically.</p>`;
+
+      document.getElementById("generalInsightBody").innerHTML = `
+        <div class="insight-block">
+          ${managerLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
+        </div>
+        <div class="insight-block">
+          <p class="insight-line"><strong>Candidates worth watching</strong> — department + source combinations that stand out historically.</p>
+          ${watchHtml}
+        </div>`;
+    }
+
+    // Builds the "your pipeline is concentrated in X" recommendation line for a source or
+    // department mix, comparing the most-represented group in the live pipeline against its
+    // historical retention extreme.
+    function buildMixRecommendation(pipelineCounts, pipelineTotal, statsLookup, extremes, rateFn) {
+      const keys = Object.keys(pipelineCounts);
+      if (keys.length === 0) return "";
+      const dominant = keys.reduce((a, b) => pipelineCounts[a] >= pipelineCounts[b] ? a : b);
+      const count = pipelineCounts[dominant];
+      const pct = (count / pipelineTotal) * 100;
+      const benchmark = statsLookup[dominant];
+
+      if (!benchmark) {
+        return `<div class="insight-recommendation">${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, which doesn't yet have enough historical hires to benchmark.</div>`;
+      }
+
+      const rate = rateFn(benchmark);
+      if (extremes.worst.names.split(", ").includes(dominant)) {
+        return `<div class="insight-recommendation">⚠️ ${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your weakest historical performer (${rate.toFixed(0)}%). Consider prioritizing candidates from stronger groups.</div>`;
+      }
+      if (extremes.best.names.split(", ").includes(dominant)) {
+        return `<div class="insight-recommendation">✅ ${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong>, your strongest historical performer (${rate.toFixed(0)}%). Keep investing here.</div>`;
+      }
+      return `<div class="insight-recommendation">${pct.toFixed(0)}% of your active pipeline (${count} candidate${count === 1 ? "" : "s"}) comes from <strong>${dominant}</strong> (${rate.toFixed(0)}% historical retention).</div>`;
     }
 
     document.getElementById("lastContact").max = new Date().toISOString().split("T")[0];
