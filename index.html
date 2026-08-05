@@ -684,6 +684,18 @@
       <div class="insight-stack" id="departmentInsightBody"></div>
     </div>
 
+    <div class="analytics-card" id="departmentInsightCardV2">
+      <h2>Department Insights &amp; Recommendations (Draft 2 &mdash; richer facts)</h2>
+      <p class="analytics-subtitle">Same retention and performance comparison, plus tenure, sentiment (satisfaction + engagement), salary, and the top turnover reason for your weakest-retention department &mdash; fields already computed but previously unused here.</p>
+      <div class="insight-stack" id="departmentInsightBodyV2"></div>
+    </div>
+
+    <div class="analytics-card" id="departmentInsightCardV3">
+      <h2>Department Insights &amp; Recommendations (Draft 3 &mdash; candidate-level actions)</h2>
+      <p class="analytics-subtitle">Active candidates bucketed by what their department historically predicts, with the retention-risk bucket personalized by that department's actual top turnover reason.</p>
+      <div class="insight-stack" id="departmentInsightBodyV3"></div>
+    </div>
+
     <div class="analytics-card" id="managerInsightCard">
       <h2>Manager Insights</h2>
       <p class="analytics-subtitle">Which managers retain and develop talent best historically, and what to do about it for active candidates headed into their departments.</p>
@@ -1707,6 +1719,118 @@
         <div class="insight-block">
           ${deptLines.map(l => `<p class="insight-line">${l}</p>`).join("")}
           ${deptRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- Department (Draft 2): richer facts, same pattern as Source Draft 2. Retention +
+      // tenure bundled per department (merged only when the same department wins both),
+      // performance folded in when it overlaps instead of restated, sentiment reused from
+      // the source helper (its wording is generic enough), plus salary and the top turnover
+      // reason for the weakest-retention department.
+      const deptTenure = pickExtreme(deptStats, d => d.avgTenure, d => d.department);
+      const deptSat = pickExtreme(deptStats, d => d.avgSatisfaction, d => d.department);
+      const deptEng = pickExtreme(deptStats, d => d.avgEngagement, d => d.department);
+      const deptSalary = pickExtreme(deptStats, d => d.avgSalary, d => d.department);
+
+      let deptPerfBestCovered = false;
+      let deptPerfWorstCovered = false;
+
+      let deptBestRetTenureLine = `<strong>${deptRet.best.names}</strong> has the strongest historical retention (${deptRet.best.metric.toFixed(0)}%)` +
+        (deptRet.best.names === deptTenure.best.names
+          ? ` and hires stay longest on average (${deptTenure.best.metric.toFixed(1)} yrs)`
+          : `, while <strong>${deptTenure.best.names}</strong> hires stay longest on average (${deptTenure.best.metric.toFixed(1)} yrs)`);
+      if (deptRet.best.names === deptPerf.worst.names) {
+        deptBestRetTenureLine += ` but rates lowest on performance (${deptPerf.worst.metric.toFixed(1)} / 4)`;
+        deptPerfWorstCovered = true;
+      }
+      deptBestRetTenureLine += ".";
+
+      let deptWorstRetTenureLine = `<strong>${deptRet.worst.names}</strong> has the weakest historical retention (${deptRet.worst.metric.toFixed(0)}%)` +
+        (deptRet.worst.names === deptTenure.worst.names
+          ? ` and the shortest average tenure (${deptTenure.worst.metric.toFixed(1)} yrs)`
+          : `, while <strong>${deptTenure.worst.names}</strong> has the shortest average tenure (${deptTenure.worst.metric.toFixed(1)} yrs)`);
+      if (deptRet.worst.names === deptPerf.best.names) {
+        deptWorstRetTenureLine += `, though it rates highest on performance (${deptPerf.best.metric.toFixed(1)} / 4)`;
+        deptPerfBestCovered = true;
+      }
+      deptWorstRetTenureLine += ".";
+
+      const deptPerfLines = [];
+      if (!deptPerfBestCovered && !deptPerfWorstCovered) {
+        deptPerfLines.push(`By performance, <strong>${deptPerf.best.names}</strong> rates highest (${deptPerf.best.metric.toFixed(1)} / 4), and <strong>${deptPerf.worst.names}</strong> rates lowest (${deptPerf.worst.metric.toFixed(1)} / 4).`);
+      } else {
+        if (!deptPerfBestCovered) deptPerfLines.push(`<strong>${deptPerf.best.names}</strong> rates highest on performance (${deptPerf.best.metric.toFixed(1)} / 4).`);
+        if (!deptPerfWorstCovered) deptPerfLines.push(`<strong>${deptPerf.worst.names}</strong> rates lowest on performance (${deptPerf.worst.metric.toFixed(1)} / 4).`);
+      }
+
+      // Only look up a turnover reason when the weakest-retention "name" is a single
+      // department (not a tied, comma-joined group), since deptLookup is keyed per department.
+      const worstDeptSingle = !deptRet.worst.names.includes(", ") ? deptLookup[deptRet.worst.names] : null;
+      const deptTurnoverLine = worstDeptSingle && worstDeptSingle.topTurnoverReason && worstDeptSingle.topTurnoverReason !== "—"
+        ? [`The most common reason people leave <strong>${deptRet.worst.names}</strong> historically is ${worstDeptSingle.topTurnoverReason}.`]
+        : [];
+
+      const deptSalaryLine = `<strong>${deptSalary.best.names}</strong> pays highest on average ($${Math.round(deptSalary.best.metric).toLocaleString()}), while <strong>${deptSalary.worst.names}</strong> pays lowest on average ($${Math.round(deptSalary.worst.metric).toLocaleString()}).`;
+
+      const deptLinesV2 = deptStats.length > 0 ? [
+        deptBestRetTenureLine,
+        ...deptPerfLines,
+        deptWorstRetTenureLine,
+        ...deptTurnoverLine,
+        combineSourceSentimentIfSame(deptSat.best, deptEng.best, "highest", "best"),
+        combineSourceSentimentIfSame(deptSat.worst, deptEng.worst, "lowest", "worst"),
+        deptSalaryLine
+      ] : ["Not enough historical hires per department (minimum 5) to compare departments yet."];
+
+      document.getElementById("departmentInsightBodyV2").innerHTML = `
+        <div class="insight-block">
+          ${deptLinesV2.map(l => `<p class="insight-line">${l}</p>`).join("")}
+          ${deptRecommendation || `<p class="insight-empty">No active candidates in the pipeline yet — add or load candidates to see how your pipeline compares.</p>`}
+        </div>`;
+
+      // --- Department (Draft 3): candidate-level action buckets, same pattern as Source
+      // Draft 3. No "grow this channel" equivalent here (department isn't a marketing
+      // lever), but the retention-risk bucket is personalized per candidate using that
+      // candidate's actual department's top turnover reason, since that data is now available.
+      const bestPerfDeptSet = new Set(deptPerf.best.names.split(", ").filter(Boolean));
+      const worstPerfDeptSet = new Set(deptPerf.worst.names.split(", ").filter(Boolean));
+      const worstRetDeptSet = new Set(deptRet.worst.names.split(", ").filter(Boolean));
+      const worstTenureDeptSet = new Set(deptTenure.worst.names.split(", ").filter(Boolean));
+
+      const protectDeptCandidates = activePipeline.filter(c => bestPerfDeptSet.has(c.department));
+      const confirmRetentionDeptCandidates = activePipeline.filter(c => worstRetDeptSet.has(c.department) || worstTenureDeptSet.has(c.department));
+      const scrutinizeSkillDeptCandidates = activePipeline.filter(c => worstPerfDeptSet.has(c.department));
+
+      const deptCandidateListHtml = list => list.map(c => `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}</p>`).join("");
+
+      let deptActionHtml = "";
+      if (protectDeptCandidates.length > 0) {
+        deptActionHtml += `<div class="insight-recommendation">${protectDeptCandidates.length} active candidate${protectDeptCandidates.length === 1 ? "" : "s"} ${protectDeptCandidates.length === 1 ? "is" : "are"} headed into a historically high-performing department. Prioritize follow-up so they don't go cold because statistically, this is a hire worth protecting.</div>`;
+        deptActionHtml += `<p class="insight-line" style="margin-top: 10px;">🟢 <strong>Protect and prioritize</strong></p>`;
+        deptActionHtml += deptCandidateListHtml(protectDeptCandidates);
+      }
+      if (confirmRetentionDeptCandidates.length > 0) {
+        deptActionHtml += `<div class="insight-recommendation" style="margin-top: 10px;">${confirmRetentionDeptCandidates.length} active candidate${confirmRetentionDeptCandidates.length === 1 ? "" : "s"} ${confirmRetentionDeptCandidates.length === 1 ? "is" : "are"} headed into a department with historically weak retention or shorter average tenure. Confirm their long-term intentions in your next follow-up or interview before finalizing the hire.</div>`;
+        deptActionHtml += `<p class="insight-line" style="margin-top: 10px;">🟡 <strong>Confirm retention intent</strong></p>`;
+        deptActionHtml += confirmRetentionDeptCandidates.map(c => {
+          const reason = deptLookup[c.department] && deptLookup[c.department].topTurnoverReason && deptLookup[c.department].topTurnoverReason !== "—"
+            ? ` &mdash; top reason people leave ${c.department}: ${deptLookup[c.department].topTurnoverReason}`
+            : "";
+          return `<p class="insight-line" style="margin-left: 20px;">${c.name} (${c.role || c.department}) — ${c.department} &middot; ${c.stage}${reason}</p>`;
+        }).join("");
+      }
+      if (scrutinizeSkillDeptCandidates.length > 0) {
+        deptActionHtml += `<div class="insight-recommendation" style="margin-top: 10px;">${scrutinizeSkillDeptCandidates.length} active candidate${scrutinizeSkillDeptCandidates.length === 1 ? "" : "s"} ${scrutinizeSkillDeptCandidates.length === 1 ? "is" : "are"} headed into a historically low-performing department. Scrutinize skill and competency more closely in the interview before moving forward.</div>`;
+        deptActionHtml += `<p class="insight-line" style="margin-top: 10px;">🔴 <strong>Extra scrutiny on skill</strong></p>`;
+        deptActionHtml += deptCandidateListHtml(scrutinizeSkillDeptCandidates);
+      }
+      if (deptRecommendation) {
+        deptActionHtml += `<p class="insight-line" style="margin-top: 10px;">🔵 <strong>Department concentration</strong></p>${deptRecommendation}`;
+      }
+
+      document.getElementById("departmentInsightBodyV3").innerHTML = `
+        <div class="insight-block">
+          <p class="insight-line"><strong>Pipeline by department signal</strong> &mdash; active candidates bucketed by what their department historically predicts.</p>
+          ${deptActionHtml || `<p class="insight-empty">No active candidates currently fall into a flagged department scenario.</p>`}
         </div>`;
 
       // --- Manager Insights: two-directional action. Retention line pluralizes correctly
