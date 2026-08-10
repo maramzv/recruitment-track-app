@@ -716,23 +716,31 @@
     const STAGE_ORDER = ["Applied", "Screening", "Interview 1", "Interview 2", "Offer", "Hired", "Rejected"];
 
     // Testing-only sample data — remove before final build
+    // daysAgo is fixed per person (not a calendar date) so the red/yellow/green mix stays
+    // the same every time this loads, regardless of what day it actually is.
     const SAMPLE_CANDIDATES = [
-      { name: "Elena Vasquez", role: "IT Support", department: "IT/IS", stage: "Screening", email: "elena.vasquez@email.com", phone: "555-201-4471", source: "LinkedIn", lastContact: "2026-07-17", notes: "" },
-      { name: "Malik Johnson", role: "Quality Control Inspector", department: "Production", stage: "Interview 1", email: "malik.johnson@email.com", phone: "555-330-2298", source: "Google Search", lastContact: "2026-08-01", notes: "" },
-      { name: "Amanda Clark", role: "Cloud Applications Engineer", department: "Software Engineering", stage: "Interview 2", email: "amanda.clark@email.com", phone: "555-118-7743", source: "Google Search", lastContact: "2026-07-22", notes: "Waiting on take-home assessment results." },
-      { name: "Ravi Patel", role: "Database Administrator", department: "IT/IS", stage: "Applied", email: "ravi.patel@email.com", phone: "555-475-3382", source: "Employee Referral", lastContact: "2026-07-24", notes: "" },
-      { name: "Owen Mitchell", role: "Regional Sales Director", department: "Sales", stage: "Screening", email: "owen.mitchell@email.com", phone: "555-902-5510", source: "Website", lastContact: "2026-07-16", notes: "" },
-      { name: "Grace Kim", role: "Executive Assistant to the CEO", department: "Executive Office", stage: "Offer", email: "grace.kim@email.com", phone: "555-611-8804", source: "Website", lastContact: "2026-08-02", notes: "Offer sent, awaiting response." },
-      { name: "Diego Fernandez", role: "Full Stack Software Engineer", department: "Software Engineering", stage: "Interview 1", email: "diego.fernandez@email.com", phone: "555-284-9012", source: "CareerBuilder", lastContact: "2026-07-31", notes: "" },
-      { name: "Natalie Brooks", role: "Sr. Accountant", department: "Admin Offices", stage: "Interview 2", email: "natalie.brooks@email.com", phone: "555-559-6631", source: "Website", lastContact: "2026-07-28", notes: "Strong technical interview, waiting on manager feedback." },
-      { name: "Andre Coleman", role: "Network Engineer", department: "IT/IS", stage: "Screening", email: "andre.coleman@email.com", phone: "555-773-1290", source: "Diversity Job Fair", lastContact: "2026-07-29", notes: "" },
-      { name: "Hannah Whitfield", role: "Production Manager", department: "Production", stage: "Applied", email: "hannah.whitfield@email.com", phone: "555-820-4456", source: "LinkedIn", lastContact: "2026-07-29", notes: "" },
-      { name: "Miguel Santos", role: "Strategic Accounts Sales Manager", department: "Sales", stage: "Rejected", email: "miguel.santos@email.com", phone: "555-347-6612", source: "Employee Referral", lastContact: "2026-08-03", notes: "Not a fit for current opening." },
-      { name: "Darnell Jefferson", role: "Quality Control Inspector", department: "Production", stage: "Hired", email: "darnell.jefferson@email.com", phone: "555-905-2287", source: "Indeed", lastContact: "2026-07-27", notes: "Accepted offer, waiting on signed paperwork and onboarding confirmation before start date." }
+      { name: "Elena Vasquez", role: "IT Support", department: "IT/IS", stage: "Screening", email: "elena.vasquez@email.com", phone: "555-201-4471", source: "LinkedIn", daysAgo: 3, notes: "" },
+      { name: "Malik Johnson", role: "Quality Control Inspector", department: "Production", stage: "Interview 1", email: "malik.johnson@email.com", phone: "555-330-2298", source: "Google Search", daysAgo: 1, notes: "" },
+      { name: "Amanda Clark", role: "Cloud Applications Engineer", department: "Software Engineering", stage: "Interview 2", email: "amanda.clark@email.com", phone: "555-118-7743", source: "Google Search", daysAgo: 13, notes: "Waiting on take-home assessment results." },
+      { name: "Ravi Patel", role: "Database Administrator", department: "IT/IS", stage: "Applied", email: "ravi.patel@email.com", phone: "555-475-3382", source: "Employee Referral", daysAgo: 5, notes: "" },
+      { name: "Owen Mitchell", role: "Regional Sales Director", department: "Sales", stage: "Screening", email: "owen.mitchell@email.com", phone: "555-902-5510", source: "Website", daysAgo: 17, notes: "" },
+      { name: "Grace Kim", role: "Executive Assistant to the CEO", department: "Executive Office", stage: "Offer", email: "grace.kim@email.com", phone: "555-611-8804", source: "Website", daysAgo: 15, notes: "Offer sent, awaiting response." },
+      { name: "Diego Fernandez", role: "Full Stack Software Engineer", department: "Software Engineering", stage: "Interview 1", email: "diego.fernandez@email.com", phone: "555-284-9012", source: "CareerBuilder", daysAgo: 2, notes: "" },
+      { name: "Natalie Brooks", role: "Sr. Accountant", department: "Admin Offices", stage: "Interview 2", email: "natalie.brooks@email.com", phone: "555-559-6631", source: "Website", daysAgo: 6, notes: "Strong technical interview, waiting on manager feedback." },
+      { name: "Andre Coleman", role: "Network Engineer", department: "IT/IS", stage: "Screening", email: "andre.coleman@email.com", phone: "555-773-1290", source: "Diversity Job Fair", daysAgo: 11, notes: "" },
+      { name: "Hannah Whitfield", role: "Production Manager", department: "Production", stage: "Applied", email: "hannah.whitfield@email.com", phone: "555-820-4456", source: "LinkedIn", daysAgo: 4, notes: "" },
+      { name: "Miguel Santos", role: "Strategic Accounts Sales Manager", department: "Sales", stage: "Rejected", email: "miguel.santos@email.com", phone: "555-347-6612", source: "Employee Referral", daysAgo: 7, notes: "Not a fit for current opening." },
+      { name: "Darnell Jefferson", role: "Quality Control Inspector", department: "Production", stage: "Hired", email: "darnell.jefferson@email.com", phone: "555-905-2287", source: "Indeed", daysAgo: 9, notes: "Accepted offer, waiting on signed paperwork and onboarding confirmation before start date." }
     ];
 
     function loadSampleData() {
-      candidates = SAMPLE_CANDIDATES.map(c => ({ ...c }));
+      const today = new Date();
+      candidates = SAMPLE_CANDIDATES.map(c => {
+        const { daysAgo, ...rest } = c;
+        const contactDate = new Date(today);
+        contactDate.setDate(contactDate.getDate() - daysAgo);
+        return { ...rest, lastContact: contactDate.toISOString().split("T")[0] };
+      });
       renderTable();
     }
 
