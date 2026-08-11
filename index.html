@@ -145,6 +145,49 @@
     .insight-recommendation { background: #f0ebff; border-left: 3px solid #6c5ce7; padding: 8px 12px; border-radius: 4px; color: #4a3f8c; font-size: 13px; margin-top: 10px; }
     .insight-empty { color: #999; font-size: 13px; text-align: center; padding: 12px; }
 
+    /* Hiring Intelligence v2 */
+    .signal-card { border-radius: 6px; padding: 14px 16px; border: 1px solid #eee; border-left-width: 4px; margin-bottom: 12px; }
+    .signal-card:last-child { margin-bottom: 0; }
+    .signal-card.signal-red { border-left-color: #e74c3c; background: #fff6f5; }
+    .signal-card.signal-yellow { border-left-color: #e6a400; background: #fffaf0; }
+    .signal-card.signal-green { border-left-color: #2e9e5b; background: #f3fbf6; }
+    .signal-title { font-size: 14px; color: #222; margin-bottom: 4px; }
+    .signal-meta { font-size: 12px; color: #888; }
+    .v2-benchmark-row { font-size: 13px; color: #444; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+    .v2-benchmark-row:last-child { border-bottom: none; }
+    .v2-benchmark-row strong { color: #111; }
+
+    /* Hiring Intelligence v3 */
+    .v3-card-list { display: flex; flex-direction: column; gap: 16px; }
+    .v3-candidate-card { border: 1px solid #eee; border-radius: 8px; padding: 16px; }
+    .v3-candidate-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .v3-combined-badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px; color: #fff; white-space: nowrap; }
+    .v3-combined-badge.tone-red { background: #e74c3c; }
+    .v3-combined-badge.tone-yellow { background: #c98f00; }
+    .v3-combined-badge.tone-green { background: #2e9e5b; }
+    .v3-candidate-name { font-size: 14px; color: #333; }
+    .v3-candidate-name strong { color: #111; }
+    .v3-chip { font-size: 11px; padding: 2px 9px; border-radius: 10px; white-space: nowrap; }
+    .v3-chip.overdue { background: #ffe3e0; color: #b0362a; }
+    .v3-chip.attention { background: #fff3cd; color: #8a6100; }
+    .v3-chip.ontrack { background: #e6f7ec; color: #1e7e45; }
+    .v3-boxes { display: flex; gap: 14px; flex-wrap: wrap; }
+    .v3-box { flex: 1 1 280px; border: 1px solid #eee; border-left-width: 4px; border-radius: 6px; padding: 12px 14px; }
+    .v3-box.tone-red { border-left-color: #e74c3c; background: #fff6f5; }
+    .v3-box.tone-yellow { border-left-color: #e6a400; background: #fffaf0; }
+    .v3-box.tone-green { border-left-color: #2e9e5b; background: #f3fbf6; }
+    .v3-box.tone-none { border-left-color: #ccc; background: #fafafa; }
+    .v3-box-title { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #888; margin-bottom: 6px; }
+    .v3-box-badge { font-size: 13px; color: #222; margin-bottom: 8px; }
+    .v3-box-label { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #999; margin: 8px 0 2px 0; }
+    .v3-box-text { font-size: 13px; color: #333; line-height: 1.5; margin: 0; }
+    .v3-box ul { margin: 2px 0 0 0; padding-left: 18px; }
+    .v3-box li { font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 2px; }
+    .v3-rank-badge { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .v3-rank-badge.tone-red { background: #e74c3c; }
+    .v3-rank-badge.tone-yellow { background: #e6a400; }
+    .v3-rank-badge.tone-green { background: #2e9e5b; }
+
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
     .cell-secondary { font-size: 12px; color: #666; }
@@ -286,6 +329,8 @@
     <button class="tab-btn active" onclick="showTab('pipeline', this)">Candidate Pipeline</button>
     <button class="tab-btn" onclick="showTab('analytics', this)">Workforce Analytics</button>
     <button class="tab-btn" onclick="showTab('intelligence', this)">Hiring Intelligence</button>
+    <button class="tab-btn" onclick="showTab('intelligence-v2', this)">Hiring Intelligence v2</button>
+    <button class="tab-btn" onclick="showTab('intelligence-v3', this)">Hiring Intelligence v3</button>
   </div>
 
   <p class="tab-tagline" id="tabTagline">What is happening now.</p>
@@ -703,6 +748,70 @@
     </div>
   </div>
 
+  <div class="tab-panel" id="tab-intelligence-v2">
+    <p class="analytics-subtitle" style="margin-bottom: 16px;">Draft restructure: candidate-level signals lead, and historical benchmarks are reference material underneath. All comparisons still exclude groups with fewer than 5 historical hires. See ideas/hiring-intelligence-bucket-system for the design writeup.</p>
+
+    <div class="analytics-card" id="priorityActionsCard">
+      <h2>Priority Actions</h2>
+      <p class="analytics-subtitle">Every active candidate, ranked by how much their source, department, and manager territory historically predict, highest-stakes first.</p>
+      <div id="priorityActionsBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v2DeepDiveCard">
+      <h2>Candidate Deep Dive</h2>
+      <p class="analytics-subtitle">Look up any candidate, active or past, for the same signal reasoning used above.</p>
+      <div class="chart-sort-row">
+        <label for="v2CandidateSelect">Candidate</label>
+        <select id="v2CandidateSelect" onchange="renderV2CandidateDetail()"></select>
+      </div>
+      <div id="v2DeepDiveBody" style="margin-top: 14px;"></div>
+    </div>
+
+    <div class="analytics-card" id="v2BenchmarksCard">
+      <h2>Historical Benchmarks</h2>
+      <p class="analytics-subtitle">The underlying numbers every signal above is built from, unchanged from v1, just condensed.</p>
+      <div id="v2BenchmarksBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v2BenchmarksCardV2">
+      <h2>Historical Benchmarks (Draft 2, richer facts)</h2>
+      <p class="analytics-subtitle">Same best/worst leaders as above, with tenure, sentiment, salary, and top turnover reason restored, scannable as tables instead of paragraphs.</p>
+      <div id="v2BenchmarksBodyV2"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-intelligence-v3">
+    <p class="analytics-subtitle" style="margin-bottom: 16px;">Redesign: one consistent scoring method (retention x performance, retention anchored to the 80% industry-healthy floor) instead of the conflicting logic in v1/v2. Groups under 5 historical hires are shown but excluded from scoring. Spec: ideas/3rd version of int tab.</p>
+
+    <div class="analytics-card" id="v3CandidateActionsCard">
+      <h2>Candidate Actions</h2>
+      <p class="analytics-subtitle">Every active candidate, scored independently on their source and their target department, so the two never get blended into one misleading verdict.</p>
+      <div id="v3CandidateActionsBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v3DeepDiveCard">
+      <h2>Candidate Deep Dive</h2>
+      <p class="analytics-subtitle">Look up any candidate, active or past, for the same card used above.</p>
+      <div class="chart-sort-row">
+        <label for="v3CandidateSelect">Candidate</label>
+        <select id="v3CandidateSelect" onchange="renderV3CandidateDetail()"></select>
+      </div>
+      <div id="v3DeepDiveBody" style="margin-top: 14px;"></div>
+    </div>
+
+    <div class="analytics-card" id="v3SourceCard">
+      <h2>Source Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Each source is scored 0-100 on its own historical numbers only, never ranked against the others. The score is an even split between retention (did people stay) and performance (how they rated on the job), plus where your current pipeline mix doesn't match the historical signal.</p>
+      <div id="v3SourceBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v3DeptCard">
+      <h2>Department Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Same scoring as Source: each department scored 0-100 on its own numbers, an even split between retention and performance. Satisfaction and Engagement are shown alongside for context, they aren't part of the score.</p>
+      <div id="v3DeptBody"></div>
+    </div>
+  </div>
+
   <script src="employeeData.js"></script>
   <script>
     let candidates = [];
@@ -787,7 +896,9 @@
       dashboard: "The most important actions and insights across all three.",
       pipeline: "What is happening now.",
       analytics: "What happened after people were hired.",
-      intelligence: "What the AI recommends based on both."
+      intelligence: "What the AI recommends based on both.",
+      "intelligence-v2": "Draft restructure: prioritized candidate signals first, benchmarks as reference.",
+      "intelligence-v3": "One consistent scoring method: retention x performance, independently for source and department."
     };
 
     function showTab(name, btn) {
@@ -996,6 +1107,8 @@
       });
       renderAlerts(candidates);
       renderIntelligence();
+      renderIntelligenceV2();
+      renderIntelligenceV3();
     }
 
     function getTenureYears(dateOfHire, dateOfTermination) {
@@ -1974,6 +2087,633 @@
           ${lines.map(l => `<p class="insight-line">${l}</p>`).join("")}
           ${riskHtml}
         </div>`;
+    }
+
+    // ============================================================================
+    // Hiring Intelligence v2 (draft) — candidate-level signals built from a fixed
+    // lookup table (source tier x department tier) instead of one shared sentence
+    // template. The lookup (which source/department currently sits best/worst) is
+    // live and recalculates from real data; the writing for each cell is fixed and
+    // hand-authored so it reads as distinct reasoning per situation, not a mad-lib.
+    // Manager territory and candidate notes/overdue status layer on top of the base
+    // cell as additional clauses rather than their own axis, to keep the grid at 9
+    // cells instead of exploding combinatorially. Full design writeup, open
+    // questions, and the grid this implements live in
+    // ideas/hiring-intelligence-bucket-system.
+    // ============================================================================
+
+    const SIGNAL_COPY = {
+      best: {
+        best: (name, source, department) => ({
+          emoji: "🟢", label: "Protect and prioritize", tone: "green", priority: 50,
+          text: `${name} is coming through <strong>${source}</strong>, your strongest historical channel, into <strong>${department}</strong>, your strongest-retaining team. Historically this combination performs about as well as it gets. Move fast: don't let a strong-fit candidate go cold on follow-up speed alone.`
+        }),
+        worst: (name, source, department) => ({
+          emoji: "🟡", label: "Strong candidate, risky landing spot", tone: "yellow", priority: 65,
+          text: `${name}'s source, <strong>${source}</strong>, has an excellent track record, but <strong>${department}</strong> is your weakest-retaining team historically. The candidate is likely solid; the risk is more about what happens after they land. Loop in the hiring manager on retention specifically, not just skill fit.`
+        }),
+        neither: (name, source, department) => ({
+          emoji: "🟢", label: "Source strength", tone: "green", priority: 35,
+          text: `${name} is coming through <strong>${source}</strong>, your top-performing channel. <strong>${department}</strong> is unremarkable either way. A straightforwardly good lead: standard process, just don't let it sit too long.`
+        })
+      },
+      worst: {
+        best: (name, source, department) => ({
+          emoji: "🟡", label: "Risky source, strong landing spot", tone: "yellow", priority: 60,
+          text: `${name} is coming through <strong>${source}</strong>, historically your weakest channel, but heading into <strong>${department}</strong>, one of your strongest teams. A strong team can sometimes offset a risky source. Worth a direct intent check in the interview, not a hard pass.`
+        }),
+        worst: (name, source, department) => ({
+          emoji: "🔴", label: "High scrutiny warranted", tone: "red", priority: 100,
+          text: `${name} is coming through <strong>${source}</strong>, your weakest historical retainer, into <strong>${department}</strong>, your weakest-retaining team. Neither signal alone would be disqualifying, but together they're worth a harder look: verify skill and motivation directly in the interview before moving forward.`
+        }),
+        neither: (name, source, department) => ({
+          emoji: "🔴", label: "Source risk", tone: "red", priority: 85,
+          text: `${name} is coming through <strong>${source}</strong>, your weakest historical channel. <strong>${department}</strong> isn't a concern on its own. The risk here is specific to this hiring channel: ask directly why they're job hunting and what they're looking for long term.`
+        })
+      },
+      neither: {
+        best: (name, source, department) => ({
+          emoji: "🟢", label: "Department strength", tone: "green", priority: 30,
+          text: `${name} is headed into <strong>${department}</strong>, one of your strongest-retaining teams historically. <strong>${source}</strong> is unremarkable either way. Solid landing spot: the team environment is doing a lot of the retention work for you.`
+        }),
+        worst: (name, source, department) => ({
+          emoji: "🔴", label: "Department risk", tone: "red", priority: 80,
+          text: `${name} is headed into <strong>${department}</strong>, your weakest-retaining team historically. <strong>${source}</strong> isn't a concern. Worth a conversation with the hiring manager about what's different about the role or team dynamics this time.`
+        }),
+        neither: null
+      }
+    };
+
+    // Returns null when a candidate doesn't land in any flagged source or department
+    // tier (the "neither/neither" cell), same as v1's "no flag" behavior.
+    function buildCandidateSignal(candidate, sourceExtremes, deptExtremes, managerCtx) {
+      const sourceBestSet = new Set(sourceExtremes.best.names.split(", ").filter(Boolean));
+      const sourceWorstSet = new Set(sourceExtremes.worst.names.split(", ").filter(Boolean));
+      const deptBestSet = new Set(deptExtremes.best.names.split(", ").filter(Boolean));
+      const deptWorstSet = new Set(deptExtremes.worst.names.split(", ").filter(Boolean));
+
+      const sourceTier = sourceBestSet.has(candidate.source) ? "best" : sourceWorstSet.has(candidate.source) ? "worst" : "neither";
+      const deptTier = deptBestSet.has(candidate.department) ? "best" : deptWorstSet.has(candidate.department) ? "worst" : "neither";
+
+      const cellFn = SIGNAL_COPY[sourceTier][deptTier];
+      if (!cellFn) return null;
+
+      const cell = cellFn(`<strong>${candidate.name}</strong>`, candidate.source, candidate.department);
+      let priority = cell.priority;
+      let extraHtml = "";
+
+      if (managerCtx) {
+        const managerTier = managerCtx.worstDepts.has(candidate.department) ? "worst"
+          : managerCtx.bestDepts.has(candidate.department) ? "best" : "neither";
+        if (managerTier === "worst") {
+          extraHtml += ` Worth noting: <strong>${candidate.department}</strong> is currently overseen by <strong>${managerCtx.worstNames}</strong>, your weakest historical retainer as a manager. Confirm directly that this is a strong fit before finalizing.`;
+          priority += 15;
+        } else if (managerTier === "best") {
+          extraHtml += ` On top of that, <strong>${candidate.department}</strong> is currently overseen by <strong>${managerCtx.bestNames}</strong>, your strongest historical retainer as a manager, reinforcing the case here.`;
+          priority += 5;
+        }
+      }
+
+      if (candidate.lastContact) {
+        const days = Math.floor((new Date() - new Date(candidate.lastContact)) / 86400000);
+        if (days >= 15) {
+          extraHtml += ` This is also overdue for follow-up (${days} days since last contact), which raises the stakes on getting a decision soon.`;
+          priority += 20;
+        } else if (days >= 8) {
+          extraHtml += ` It's also been ${days} days since last contact, worth a check-in regardless of the above.`;
+          priority += 10;
+        }
+      }
+
+      if (candidate.notes) {
+        extraHtml += ` Note on file: "${candidate.notes}"`;
+      }
+
+      return { candidate, emoji: cell.emoji, label: cell.label, tone: cell.tone, text: cell.text + extraHtml, priority };
+    }
+
+    function renderSignalCard(signal) {
+      const c = signal.candidate;
+      return `
+        <div class="signal-card signal-${signal.tone}">
+          <div class="signal-title">${signal.emoji} <strong>${signal.label}</strong></div>
+          <div class="signal-meta">${c.name} &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></div>
+          <p class="insight-line" style="margin-top: 8px;">${signal.text}</p>
+        </div>`;
+    }
+
+    function renderIntelligenceV2() {
+      const MIN_SAMPLE = 5;
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+
+      const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE);
+      const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE);
+      const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE);
+
+      const priorityBody = document.getElementById("priorityActionsBody");
+      const benchmarkBody = document.getElementById("v2BenchmarksBody");
+
+      if (sourceStats.length === 0 || deptStats.length === 0) {
+        priorityBody.innerHTML = `<p class="insight-empty">Not enough historical hires yet to generate prioritized signals.</p>`;
+        benchmarkBody.innerHTML = `<p class="insight-empty">Not enough historical hires yet to benchmark.</p>`;
+        populateV2Selector();
+        return;
+      }
+
+      const sourceExtremes = pickExtreme(sourceStats, s => s.retentionRate, s => s.source);
+      const deptExtremes = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
+
+      let managerCtx = null;
+      if (teamStats.length > 0) {
+        const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
+        const bestNames = teamRet.best.names.split(", ").filter(Boolean);
+        const worstNames = teamRet.worst.names.split(", ").filter(Boolean);
+        managerCtx = {
+          bestNames: teamRet.best.names,
+          worstNames: teamRet.worst.names,
+          bestDepts: new Set(teamStats.filter(t => bestNames.includes(t.managerName)).flatMap(t => t.departments.split(", "))),
+          worstDepts: new Set(teamStats.filter(t => worstNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")))
+        };
+      }
+
+      const signals = activePipeline
+        .map(c => buildCandidateSignal(c, sourceExtremes, deptExtremes, managerCtx))
+        .filter(Boolean)
+        .sort((a, b) => b.priority - a.priority);
+
+      priorityBody.innerHTML = signals.length > 0
+        ? signals.map(renderSignalCard).join("")
+        : `<p class="insight-empty">No active candidates currently stand out against historical source or department signals.</p>`;
+
+      const benchmarkRows = [
+        `<div class="v2-benchmark-row"><strong>Source:</strong> ${sourceExtremes.best.names} leads on retention (${sourceExtremes.best.metric.toFixed(0)}%); ${sourceExtremes.worst.names} trails (${sourceExtremes.worst.metric.toFixed(0)}%).</div>`,
+        `<div class="v2-benchmark-row"><strong>Department:</strong> ${deptExtremes.best.names} leads on retention (${deptExtremes.best.metric.toFixed(0)}%); ${deptExtremes.worst.names} trails (${deptExtremes.worst.metric.toFixed(0)}%).</div>`
+      ];
+      if (managerCtx) {
+        benchmarkRows.push(`<div class="v2-benchmark-row"><strong>Manager:</strong> ${managerCtx.bestNames} retains best; ${managerCtx.worstNames} retains least.</div>`);
+      } else {
+        benchmarkRows.push(`<div class="v2-benchmark-row"><strong>Manager:</strong> Not enough historical hires per manager (minimum 5) to compare yet.</div>`);
+      }
+      benchmarkBody.innerHTML = benchmarkRows.join("");
+
+      document.getElementById("v2BenchmarksBodyV2").innerHTML = renderRichBenchmarks(sourceStats, deptStats, teamStats);
+
+      populateV2Selector();
+    }
+
+    // Looks up the full stat row for whichever name is first in a tied "best"/"worst"
+    // names string (pickExtreme joins ties with ", "), so a rich table can show that
+    // entity's other fields (tenure, sentiment, salary, turnover reason) instead of
+    // just the one metric it was ranked on. Ties beyond the first name are called out
+    // rather than silently dropped.
+    function firstNameAndTieNote(namesStr) {
+      const names = namesStr.split(", ").filter(Boolean);
+      return { first: names[0], tieNote: names.length > 1 ? ` (+${names.length - 1} tied)` : "" };
+    }
+
+    function renderRichBenchmarks(sourceStats, deptStats, teamStats) {
+      if (sourceStats.length === 0 || deptStats.length === 0) {
+        return `<p class="insight-empty">Not enough historical hires yet to benchmark.</p>`;
+      }
+
+      const sourceExtremes = pickExtreme(sourceStats, s => s.retentionRate, s => s.source);
+      const deptExtremes = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
+
+      const srcBest = firstNameAndTieNote(sourceExtremes.best.names);
+      const srcWorst = firstNameAndTieNote(sourceExtremes.worst.names);
+      const srcBestRow = sourceStats.find(s => s.source === srcBest.first);
+      const srcWorstRow = sourceStats.find(s => s.source === srcWorst.first);
+
+      const deptBest = firstNameAndTieNote(deptExtremes.best.names);
+      const deptWorst = firstNameAndTieNote(deptExtremes.worst.names);
+      const deptBestRow = deptStats.find(d => d.department === deptBest.first);
+      const deptWorstRow = deptStats.find(d => d.department === deptWorst.first);
+
+      let sourceTable = `
+        <h4 style="margin: 0 0 4px 0; font-size: 14px;">Source</h4>
+        <table class="analytics-table">
+          <thead><tr><th>Leader</th><th>Retention</th><th>Avg Tenure</th><th>Performance</th><th>Satisfaction</th><th>Engagement</th></tr></thead>
+          <tbody>
+            <tr><td>🟢 Best: ${srcBestRow.source}${srcBest.tieNote}</td><td>${srcBestRow.retentionRate.toFixed(0)}%</td><td>${srcBestRow.avgTenure.toFixed(1)} yrs</td><td>${srcBestRow.avgPerformance.toFixed(1)} / 4</td><td>${srcBestRow.avgSatisfaction.toFixed(1)} / 5</td><td>${srcBestRow.avgEngagement.toFixed(2)} / 5</td></tr>
+            <tr><td>🔴 Worst: ${srcWorstRow.source}${srcWorst.tieNote}</td><td>${srcWorstRow.retentionRate.toFixed(0)}%</td><td>${srcWorstRow.avgTenure.toFixed(1)} yrs</td><td>${srcWorstRow.avgPerformance.toFixed(1)} / 4</td><td>${srcWorstRow.avgSatisfaction.toFixed(1)} / 5</td><td>${srcWorstRow.avgEngagement.toFixed(2)} / 5</td></tr>
+          </tbody>
+        </table>`;
+
+      let deptTable = `
+        <h4 style="margin: 20px 0 4px 0; font-size: 14px;">Department</h4>
+        <table class="analytics-table">
+          <thead><tr><th>Leader</th><th>Retention</th><th>Avg Tenure</th><th>Performance</th><th>Satisfaction</th><th>Avg Salary</th><th>Top Turnover Reason</th></tr></thead>
+          <tbody>
+            <tr><td>🟢 Best: ${deptBestRow.department}${deptBest.tieNote}</td><td>${deptBestRow.retentionRate.toFixed(0)}%</td><td>${deptBestRow.avgTenure.toFixed(1)} yrs</td><td>${deptBestRow.avgPerformance.toFixed(1)} / 4</td><td>${deptBestRow.avgSatisfaction.toFixed(1)} / 5</td><td>$${Math.round(deptBestRow.avgSalary).toLocaleString()}</td><td>${deptBestRow.topTurnoverReason}</td></tr>
+            <tr><td>🔴 Worst: ${deptWorstRow.department}${deptWorst.tieNote}</td><td>${deptWorstRow.retentionRate.toFixed(0)}%</td><td>${deptWorstRow.avgTenure.toFixed(1)} yrs</td><td>${deptWorstRow.avgPerformance.toFixed(1)} / 4</td><td>${deptWorstRow.avgSatisfaction.toFixed(1)} / 5</td><td>$${Math.round(deptWorstRow.avgSalary).toLocaleString()}</td><td>${deptWorstRow.topTurnoverReason}</td></tr>
+          </tbody>
+        </table>`;
+
+      let managerTable = `<p class="insight-empty">Not enough historical hires per manager (minimum 5) to compare yet.</p>`;
+      if (teamStats.length > 0) {
+        const teamExtremes = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
+        const mgrBest = firstNameAndTieNote(teamExtremes.best.names);
+        const mgrWorst = firstNameAndTieNote(teamExtremes.worst.names);
+        const mgrBestRow = teamStats.find(t => t.managerName === mgrBest.first);
+        const mgrWorstRow = teamStats.find(t => t.managerName === mgrWorst.first);
+        managerTable = `
+          <table class="analytics-table">
+            <thead><tr><th>Leader</th><th>Retention</th><th>Avg Tenure</th><th>Performance</th><th>Satisfaction</th><th>Top Turnover Reason</th></tr></thead>
+            <tbody>
+              <tr><td>🟢 Best: ${mgrBestRow.managerName}${mgrBest.tieNote}</td><td>${mgrBestRow.retentionRate.toFixed(0)}%</td><td>${mgrBestRow.avgTenure.toFixed(1)} yrs</td><td>${mgrBestRow.avgPerformance.toFixed(1)} / 4</td><td>${mgrBestRow.avgSatisfaction.toFixed(1)} / 5</td><td>${mgrBestRow.topTurnoverReason}</td></tr>
+              <tr><td>🔴 Worst: ${mgrWorstRow.managerName}${mgrWorst.tieNote}</td><td>${mgrWorstRow.retentionRate.toFixed(0)}%</td><td>${mgrWorstRow.avgTenure.toFixed(1)} yrs</td><td>${mgrWorstRow.avgPerformance.toFixed(1)} / 4</td><td>${mgrWorstRow.avgSatisfaction.toFixed(1)} / 5</td><td>${mgrWorstRow.topTurnoverReason}</td></tr>
+            </tbody>
+          </table>`;
+      }
+
+      return sourceTable + deptTable + `<h4 style="margin: 20px 0 4px 0; font-size: 14px;">Manager</h4>` + managerTable;
+    }
+
+    function populateV2Selector() {
+      const select = document.getElementById("v2CandidateSelect");
+      const previousSelection = select.value;
+      select.innerHTML = contextCandidateList.length > 0
+        ? contextCandidateList.map((c, i) => `<option value="${i}">${c.name} &middot; ${c.role || c.department} (${c.stage})</option>`).join("")
+        : `<option value="">No candidates</option>`;
+      if (previousSelection && contextCandidateList[previousSelection]) select.value = previousSelection;
+      renderV2CandidateDetail();
+    }
+
+    function renderV2CandidateDetail() {
+      const MIN_SAMPLE = 5;
+      const select = document.getElementById("v2CandidateSelect");
+      const body = document.getElementById("v2DeepDiveBody");
+      const candidate = contextCandidateList[select.value];
+
+      if (!candidate) {
+        body.innerHTML = `<p class="insight-empty">No candidates yet, add or load candidates to see signals here.</p>`;
+        return;
+      }
+
+      const sourceStats = getSourceStats().filter(s => s.hired >= MIN_SAMPLE);
+      const deptStats = getDepartmentStats().filter(d => d.headcount >= MIN_SAMPLE);
+      const teamStats = getTeamStats().filter(t => t.headcount >= MIN_SAMPLE);
+
+      if (sourceStats.length === 0 || deptStats.length === 0) {
+        body.innerHTML = `<p class="insight-empty">Not enough historical hires yet to generate a signal for this candidate.</p>`;
+        return;
+      }
+
+      const sourceExtremes = pickExtreme(sourceStats, s => s.retentionRate, s => s.source);
+      const deptExtremes = pickExtreme(deptStats, d => d.retentionRate, d => d.department);
+
+      let managerCtx = null;
+      if (teamStats.length > 0) {
+        const teamRet = pickExtreme(teamStats, t => t.retentionRate, t => t.managerName);
+        const bestNames = teamRet.best.names.split(", ").filter(Boolean);
+        const worstNames = teamRet.worst.names.split(", ").filter(Boolean);
+        managerCtx = {
+          bestNames: teamRet.best.names,
+          worstNames: teamRet.worst.names,
+          bestDepts: new Set(teamStats.filter(t => bestNames.includes(t.managerName)).flatMap(t => t.departments.split(", "))),
+          worstDepts: new Set(teamStats.filter(t => worstNames.includes(t.managerName)).flatMap(t => t.departments.split(", ")))
+        };
+      }
+
+      const signal = buildCandidateSignal(candidate, sourceExtremes, deptExtremes, managerCtx);
+      body.innerHTML = signal
+        ? renderSignalCard(signal)
+        : `<p class="insight-empty">${candidate.name}'s source and department are both unremarkable historically, nothing stands out enough to flag.</p>`;
+    }
+
+    // ============================================================================
+    // Hiring Intelligence v3 — replaces the conflicting v1/v2 scoring with one
+    // consistent method. Full reasoning and worked examples live in
+    // ideas/3rd version of int tab; this implements that spec as closely as
+    // possible rather than re-deriving new rules.
+    //
+    // - Score (ranking only): absolute, not relative to other sources/departments.
+    //   Score = average of (Retention%) and (Performance/4 * 100), so a perfect
+    //   100% retention + 4/4 performance scores 100. Satisfaction and Engagement
+    //   are shown on the Department ranking table for context only, they don't
+    //   factor into the score or the sort.
+    // - Quadrant (candidate cards + ranking badge color): Retention x Performance,
+    //   computed independently for a candidate's Source and their Department.
+    //   Retention High/Low is anchored to the 80% industry-healthy floor (external,
+    //   not relative to our own data). Performance High/Low is a median split within
+    //   the group, ties default to Low (the more cautious bucket).
+    // - Groups with under 5 historical hires are excluded from scoring/quadrants but
+    //   still shown, with a note, never silently hidden.
+    // - Manager is dropped entirely: it's one-to-many with department (a department
+    //   can span many managers) and we don't know which manager a candidate would
+    //   actually report to, so a manager-based signal isn't reliable per-candidate.
+    // ============================================================================
+
+    const V3_MIN_SAMPLE = 5;
+    const V3_RETENTION_FLOOR = 80;
+
+    function v3RetentionPhrase(retention) {
+      if (retention >= V3_RETENTION_FLOOR) return `${retention.toFixed(0)}% retention`;
+      if (retention >= 65) return `${retention.toFixed(0)}% retention (below healthy retention)`;
+      return `${retention.toFixed(0)}% retention (well below healthy retention)`;
+    }
+
+    function v3Median(values) {
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    }
+
+    // Scores and quadrant-classifies a group of source or department stat rows.
+    // Score is absolute (each row scored on its own numbers only, never compared
+    // against the rest of the group): average of Retention% and Performance
+    // rescaled to 0-100. The performance scale is 1-4 (PIP=1 ... Exceeds=4), not
+    // 0-4, so the rescale is (performance-1)/3*100, anchored to the scale's real
+    // floor (1 -> 0) and ceiling (4 -> 100), not a floor of 0 that no one can score.
+    // Quadrant classification (used by the Candidate Actions cards, not the ranking
+    // table) is unrelated to score and stays as-is: High/Low retention anchored to
+    // the 80% floor, High/Low performance via median split within the group (ties
+    // go Low), both computed on the raw 1-4 performance value.
+    // Returns { scored: [...sorted by score desc, each with score/retTier/perfTier/
+    // quadrant/tone], excluded: [...n<5 rows, unscored] }.
+    function v3ScoreGroup(stats, nField, retField, perfField) {
+      const eligible = stats.filter(s => s[nField] >= V3_MIN_SAMPLE);
+      const excluded = stats.filter(s => s[nField] < V3_MIN_SAMPLE);
+      if (eligible.length === 0) return { scored: [], excluded };
+
+      const perfMedian = v3Median(eligible.map(s => s[perfField]));
+
+      const scored = eligible.map(s => {
+        const retention = s[retField];
+        const performance = s[perfField];
+        const score = (retention + ((performance - 1) / 3) * 100) / 2;
+        const retTier = retention >= V3_RETENTION_FLOOR ? "High" : "Low";
+        const perfTier = performance > perfMedian ? "High" : "Low";
+        const quadrant = retTier + "/" + perfTier;
+        const tone = retTier === "High" && perfTier === "High" ? "green"
+          : retTier === "Low" && perfTier === "Low" ? "red" : "yellow";
+        return { row: s, retention, performance, score, retTier, perfTier, quadrant, tone };
+      });
+      scored.sort((a, b) => b.score - a.score);
+      return { scored, excluded };
+    }
+
+    const V3_SOURCE_TEMPLATES = {
+      "High/High": (ctx) => ({
+        badge: "🟢 Protect & Prioritize",
+        insight: `${ctx.source} is one of your strongest channels: hires here historically stay (${v3RetentionPhrase(ctx.retention)}) and perform well (${ctx.performance.toFixed(1)}/4).`,
+        recs: ["Move at normal pace, this is a strong match", "Don't let a good candidate go cold on process speed alone"]
+      }),
+      "High/Low": (ctx) => ({
+        badge: "🟡 Verify Skill Match",
+        insight: `${ctx.source} hires stick around (${v3RetentionPhrase(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(1)}/4).`,
+        recs: ["Verify skills concretely match this role's requirements in the interview", "The risk here is capability, not commitment"]
+      }),
+      "Low/High": (ctx) => ({
+        badge: "🟡 Confirm Intent",
+        insight: `${ctx.source} hires perform well (${ctx.performance.toFixed(1)}/4) but don't stay long (${v3RetentionPhrase(ctx.retention)}).`,
+        recs: ["Ask directly why they're job hunting and what they want long-term", "Capability isn't in question here, commitment is"]
+      }),
+      "Low/Low": (ctx) => ({
+        badge: "🔴 Extra Scrutiny",
+        insight: `${ctx.source} is your weakest channel on both retention (${v3RetentionPhrase(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        recs: ["Verify skills directly against role requirements in interview", "Ask directly why they're job hunting and what they want long-term"]
+      })
+    };
+
+    const V3_DEPT_TEMPLATES = {
+      "High/High": (ctx) => ({
+        badge: "🟢 Team Strength, Use It",
+        insight: `${ctx.department} is one of your strongest-performing teams (${v3RetentionPhrase(ctx.retention)}, ${ctx.performance.toFixed(1)}/4 performance).`,
+        recs: ["Lead with this team's numbers if the candidate is weighing competing offers", "Genuine selling point, use it in the close"]
+      }),
+      "High/Low": (ctx) => ({
+        badge: "🟡 Support Skill Ramp-Up",
+        insight: `${ctx.department} retains well (${v3RetentionPhrase(ctx.retention)}) but underperforms relative to other teams (${ctx.performance.toFixed(1)}/4).`,
+        recs: ["Flag for extra onboarding/ramp-up support, not a hiring red flag", "No extra interview scrutiny needed on fit, this is a support issue"]
+      }),
+      "Low/High": (ctx) => ({
+        badge: "🟡 Address Retention Risk",
+        insight: `${ctx.department} produces strong performers (${ctx.performance.toFixed(1)}/4) but struggles to retain them (${v3RetentionPhrase(ctx.retention)}).`,
+        recs: ["Talk to the hiring manager about role or team dynamics before finalizing", "Not a candidate-quality issue, likely an environment one"]
+      }),
+      "Low/Low": (ctx) => ({
+        badge: "🔴 Prioritize Fit & Comp",
+        insight: `${ctx.department} is your weakest team on both retention (${v3RetentionPhrase(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        recs: [
+          "Prioritize verifying skill and culture fit closely in the interview",
+          `Confirm comp is competitive (historical average here: $${Math.round(ctx.avgSalary || 0).toLocaleString()})`
+        ]
+      })
+    };
+
+    function v3BoxHtml(kind, name, entry, avgSalary) {
+      if (!entry) {
+        const note = kind === "Source"
+          ? `Not enough historical hires here (minimum 5) for a reliable source signal. Department insight only.`
+          : `Not enough historical hires here (minimum 5) for a reliable department signal. Source insight only.`;
+        return `
+          <div class="v3-box tone-none">
+            <div class="v3-box-title">${kind}: ${name}</div>
+            <p class="v3-box-text">${note}</p>
+          </div>`;
+      }
+      const templates = kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[entry.quadrant]({
+        source: name, department: name, retention: entry.retention, performance: entry.performance, avgSalary
+      });
+      return `
+        <div class="v3-box tone-${entry.tone}">
+          <div class="v3-box-title">${kind}: ${name}</div>
+          <div class="v3-box-badge">${tpl.badge}</div>
+          <div class="v3-box-label">Insight</div>
+          <p class="v3-box-text">${tpl.insight}</p>
+          <div class="v3-box-label">Recommendation</div>
+          <ul>${tpl.recs.map(r => `<li>${r}</li>`).join("")}</ul>
+        </div>`;
+    }
+
+    const V3_TONE_RANK = { red: 0, yellow: 1, green: 2 };
+
+    function v3BuildCandidateCard(candidate, sourceScored, deptScored) {
+      const sourceEntry = sourceScored.find(e => e.row.source === candidate.source) || null;
+      const deptEntry = deptScored.find(e => e.row.department === candidate.department) || null;
+
+      const tones = [sourceEntry, deptEntry].filter(Boolean).map(e => e.tone);
+      const combinedTone = tones.length === 0 ? "green" : tones.reduce((a, b) => V3_TONE_RANK[a] <= V3_TONE_RANK[b] ? a : b);
+
+      const days = candidate.lastContact ? Math.floor((new Date() - new Date(candidate.lastContact)) / 86400000) : 0;
+      const status = days >= 15 ? "overdue" : days >= 8 ? "attention" : "ontrack";
+      const statusLabel = status === "overdue" ? `⏱ Overdue, ${days} days` : status === "attention" ? `⏱ Needs Attention, ${days} days` : `✅ On Track, ${days} days`;
+
+      const isOverdueRisk = status === "overdue" && combinedTone !== "green";
+
+      return {
+        candidate, combinedTone, status, statusLabel, isOverdueRisk,
+        sourceEntry, deptEntry,
+        sortKey: [isOverdueRisk ? 0 : 1, V3_TONE_RANK[combinedTone], -days]
+      };
+    }
+
+    function v3RenderCandidateCard(model, avgSalaryByDept) {
+      const c = model.candidate;
+      const avgSalary = avgSalaryByDept[c.department];
+      return `
+        <div class="v3-candidate-card">
+          <div class="v3-candidate-header">
+            <span class="v3-combined-badge tone-${model.combinedTone}">${model.combinedTone === "red" ? "🔴" : model.combinedTone === "yellow" ? "🟡" : "🟢"} Combined</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-boxes">
+            ${v3BoxHtml("Source", c.source, model.sourceEntry, avgSalary)}
+            ${v3BoxHtml("Department", c.department, model.deptEntry, avgSalary)}
+          </div>
+        </div>`;
+    }
+
+    // Source table: Retention, Performance, Score (3 data columns). Department table
+    // adds Satisfaction and Engagement (5 data columns) — shown for context only,
+    // they don't factor into the score or the sort, which is Score-driven for both.
+    function v3RenderRankingTable(scored, excluded, kind) {
+      if (scored.length === 0 && excluded.length === 0) {
+        return `<p class="insight-empty">No historical ${kind.toLowerCase()} data yet.</p>`;
+      }
+      const nameField = kind === "Source" ? "source" : "department";
+      const nField = kind === "Source" ? "hired" : "headcount";
+      const isDept = kind === "Department";
+      const dataColCount = isDept ? 5 : 3;
+
+      const headerCells = `<th>${kind}</th><th>Retention</th><th>Performance</th>`
+        + (isDept ? `<th>Satisfaction</th><th>Engagement</th>` : "")
+        + `<th>Score</th>`;
+
+      const rows = scored.map(e => `
+        <tr>
+          <td><span class="v3-rank-badge tone-${e.tone}"></span>${e.row[nameField]}</td>
+          <td>${v3RetentionPhrase(e.retention)}</td>
+          <td>${e.performance.toFixed(1)} / 4</td>
+          ${isDept ? `<td>${e.row.avgSatisfaction.toFixed(1)} / 5</td><td>${e.row.avgEngagement.toFixed(2)} / 5</td>` : ""}
+          <td>${e.score.toFixed(1)}</td>
+        </tr>`).join("");
+      const excludedRows = excluded.map(e => `
+        <tr>
+          <td>${e[nameField]}</td>
+          <td colspan="${dataColCount}" style="color:#999;">${e[nField]} historical hire${e[nField] === 1 ? "" : "s"}, too few to score reliably (minimum 5)</td>
+        </tr>`).join("");
+      return `
+        <table class="analytics-table">
+          <thead><tr>${headerCells}</tr></thead>
+          <tbody>${rows}${excludedRows}</tbody>
+        </table>`;
+    }
+
+    // Pipeline-concentration callouts: only fires for the single best-scored and
+    // single worst-scored entry, and only when there's an actual mismatch worth
+    // acting on (per spec, not a sentence for every row).
+    function v3ConcentrationCallouts(scored, pipelineCounts, totalPipeline, kind) {
+      if (scored.length === 0 || totalPipeline === 0) return [];
+      const best = scored[0];
+      const worst = scored[scored.length - 1];
+      const bullets = [];
+
+      const bestName = best.row[kind === "Source" ? "source" : "department"];
+      const bestCount = pipelineCounts[bestName] || 0;
+      const bestShare = bestCount / totalPipeline;
+      if (bestCount === 0) {
+        bullets.push(`<strong>${bestName}</strong> is your strongest-scoring ${kind.toLowerCase()} historically, but has zero active candidates right now, a gap worth addressing.`);
+      } else if (bestShare <= 0.15) {
+        bullets.push(`<strong>${bestName}</strong> is your strongest-scoring ${kind.toLowerCase()}, but only ${bestCount} of ${totalPipeline} active candidates ${bestCount === 1 ? "comes" : "come"} through it. Consider investing more here.`);
+      }
+
+      const worstName = worst.row[kind === "Source" ? "source" : "department"];
+      const worstCount = pipelineCounts[worstName] || 0;
+      const worstShare = worstCount / totalPipeline;
+      const dominant = Object.keys(pipelineCounts).length > 0
+        ? Object.keys(pipelineCounts).reduce((a, b) => pipelineCounts[a] >= pipelineCounts[b] ? a : b) : null;
+      if (worstCount > 0 && (worstName === dominant || worstShare >= 0.25)) {
+        bullets.push(`<strong>${worstName}</strong> is your weakest-scoring ${kind.toLowerCase()} and currently makes up ${worstCount} of ${totalPipeline} active candidates (${(worstShare * 100).toFixed(0)}%), your heaviest concentration here. See candidate cards above for specifics${kind === "Source" ? "" : " on how to support these hires"}.`);
+      }
+
+      return bullets;
+    }
+
+    function renderIntelligenceV3() {
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+      const sourceStats = getSourceStats();
+      const deptStats = getDepartmentStats();
+
+      const sourceScoring = v3ScoreGroup(sourceStats, "hired", "retentionRate", "avgPerformance");
+      const deptScoring = v3ScoreGroup(deptStats, "headcount", "retentionRate", "avgPerformance");
+
+      const avgSalaryByDept = {};
+      deptStats.forEach(d => { avgSalaryByDept[d.department] = d.avgSalary; });
+
+      // --- Candidate Actions ---
+      const cards = activePipeline.map(c => v3BuildCandidateCard(c, sourceScoring.scored, deptScoring.scored));
+      cards.sort((a, b) => {
+        for (let i = 0; i < a.sortKey.length; i++) {
+          if (a.sortKey[i] !== b.sortKey[i]) return a.sortKey[i] - b.sortKey[i];
+        }
+        return 0;
+      });
+      document.getElementById("v3CandidateActionsBody").innerHTML = cards.length > 0
+        ? `<div class="v3-card-list">${cards.map(m => v3RenderCandidateCard(m, avgSalaryByDept)).join("")}</div>`
+        : `<p class="insight-empty">No active candidates yet, add or load candidates to see actions here.</p>`;
+
+      // --- Source Insights & Recommendations ---
+      const sourcePipelineCounts = countBy(activePipeline, "source");
+      const sourceCallouts = v3ConcentrationCallouts(sourceScoring.scored, sourcePipelineCounts, activePipeline.length, "Source");
+      document.getElementById("v3SourceBody").innerHTML = `
+        <div class="insight-block">
+          ${v3RenderRankingTable(sourceScoring.scored, sourceScoring.excluded, "Source")}
+        </div>
+        <div class="insight-block" style="margin-top: 14px;">
+          ${sourceCallouts.length > 0
+            ? sourceCallouts.map(b => `<div class="insight-recommendation">${b}</div>`).join("")
+            : `<p class="insight-empty">Current pipeline mix roughly matches historical source strength, nothing to flag.</p>`}
+        </div>`;
+
+      // --- Department Insights & Recommendations ---
+      const deptPipelineCounts = countBy(activePipeline, "department");
+      const deptCallouts = v3ConcentrationCallouts(deptScoring.scored, deptPipelineCounts, activePipeline.length, "Department");
+      document.getElementById("v3DeptBody").innerHTML = `
+        <div class="insight-block">
+          ${v3RenderRankingTable(deptScoring.scored, deptScoring.excluded, "Department")}
+        </div>
+        <div class="insight-block" style="margin-top: 14px;">
+          ${deptCallouts.length > 0
+            ? deptCallouts.map(b => `<div class="insight-recommendation">${b}</div>`).join("")
+            : `<p class="insight-empty">Current pipeline mix roughly matches historical department strength, nothing to flag.</p>`}
+        </div>`;
+
+      populateV3Selector();
+    }
+
+    function populateV3Selector() {
+      const select = document.getElementById("v3CandidateSelect");
+      const previousSelection = select.value;
+      select.innerHTML = contextCandidateList.length > 0
+        ? contextCandidateList.map((c, i) => `<option value="${i}">${c.name} &middot; ${c.role || c.department} (${c.stage})</option>`).join("")
+        : `<option value="">No candidates</option>`;
+      if (previousSelection && contextCandidateList[previousSelection]) select.value = previousSelection;
+      renderV3CandidateDetail();
+    }
+
+    function renderV3CandidateDetail() {
+      const select = document.getElementById("v3CandidateSelect");
+      const body = document.getElementById("v3DeepDiveBody");
+      const candidate = contextCandidateList[select.value];
+
+      if (!candidate) {
+        body.innerHTML = `<p class="insight-empty">No candidates yet, add or load candidates to see actions here.</p>`;
+        return;
+      }
+
+      const sourceStats = getSourceStats();
+      const deptStats = getDepartmentStats();
+      const sourceScoring = v3ScoreGroup(sourceStats, "hired", "retentionRate", "avgPerformance");
+      const deptScoring = v3ScoreGroup(deptStats, "headcount", "retentionRate", "avgPerformance");
+      const avgSalaryByDept = {};
+      deptStats.forEach(d => { avgSalaryByDept[d.department] = d.avgSalary; });
+
+      const model = v3BuildCandidateCard(candidate, sourceScoring.scored, deptScoring.scored);
+      body.innerHTML = v3RenderCandidateCard(model, avgSalaryByDept);
     }
 
     // Builds the "your pipeline is concentrated in X" recommendation line for a source or
