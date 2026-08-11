@@ -194,6 +194,7 @@
     .v3-priority-row.tone-green { border-left-color: #2e9e5b; background: #f3fbf6; }
     .v3-priority-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 4px; }
     .v3-priority-reason { display: block; font-size: 13px; color: #333; line-height: 1.4; }
+    .v3-priority-reason + .v3-priority-reason { margin-top: 4px; }
     .v3-note { background: #f0ebff; border-left: 3px solid #6c5ce7; border-radius: 4px; padding: 10px 14px; margin-bottom: 20px; }
     .v3-note summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #4a3f8c; }
     .v3-note p { margin: 8px 0 0 0; font-size: 13px; color: #4a3f8c; line-height: 1.5; }
@@ -798,7 +799,6 @@
       <p><strong>Use historical signals as conversation guides, not candidate verdicts.</strong></p>
       <p>Source and department patterns describe what has happened historically; they do not determine how an individual candidate will perform or how long they will stay.</p>
       <p>These signals should help recruiters ask better questions and identify areas worth validating, not determine whether a candidate is qualified or should move forward.</p>
-      <p>Where the historical sample is small, treat the signal with additional caution. A pattern based on a limited number of hires should not be interpreted with the same confidence as a pattern supported by a larger sample.</p>
       <p><strong>Historical signals should determine what you investigate, not what you conclude.</strong></p>
     </details>
 
@@ -2680,32 +2680,29 @@
       };
     }
 
-    // Picks whichever of a candidate's Source/Department entries is the worse-toned
-    // (red beats yellow beats green), and pulls that bucket's badge + insight sentence
-    // so the condensed row can show one reason instead of the full card's two boxes.
-    function v3DrivingReason(model) {
-      const { candidate, sourceEntry, deptEntry } = model;
-      const entries = [];
-      if (sourceEntry) entries.push({ kind: "Source", name: candidate.source, entry: sourceEntry });
-      if (deptEntry) entries.push({ kind: "Department", name: candidate.department, entry: deptEntry });
-      if (entries.length === 0) return null;
-
-      entries.sort((a, b) => V3_TONE_RANK[a.entry.tone] - V3_TONE_RANK[b.entry.tone]);
-      const picked = entries[0];
-      const templates = picked.kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
-      const tpl = templates[picked.entry.quadrant]({
-        source: picked.name, department: picked.name,
-        retention: picked.entry.retention, performance: picked.entry.performance
+    // Builds the badge + insight sentence for a single Source or Department entry, same
+    // template lookup v3DrivingReason used to use for just the worse-toned one — now used
+    // for both, so the priority row can show department and source as two separate reasons.
+    function v3ReasonFor(kind, name, entry) {
+      if (!entry) return null;
+      const templates = kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[entry.quadrant]({
+        source: name, department: name,
+        retention: entry.retention, performance: entry.performance
       });
-      return { kind: picked.kind, badge: tpl.badge, insight: tpl.insight };
+      return { kind, badge: tpl.badge, insight: tpl.insight };
     }
 
     function v3RenderPriorityRow(model) {
       const c = model.candidate;
-      const reason = v3DrivingReason(model);
-      const reasonHtml = reason
-        ? `<span class="v3-priority-reason"><strong>${reason.kind}:</strong> ${reason.badge} &mdash; ${reason.insight}</span>`
-        : `<span class="v3-priority-reason">Not enough historical data yet for a source or department signal.</span>`;
+      const deptReason = v3ReasonFor("Department", c.department, model.deptEntry);
+      const sourceReason = v3ReasonFor("Source", c.source, model.sourceEntry);
+      const deptReasonHtml = deptReason
+        ? `<span class="v3-priority-reason"><strong>${deptReason.kind}:</strong> ${deptReason.badge} &mdash; ${deptReason.insight}</span>`
+        : `<span class="v3-priority-reason"><strong>Department:</strong> Not enough historical data yet for a department signal.</span>`;
+      const sourceReasonHtml = sourceReason
+        ? `<span class="v3-priority-reason"><strong>${sourceReason.kind}:</strong> ${sourceReason.badge} &mdash; ${sourceReason.insight}</span>`
+        : `<span class="v3-priority-reason"><strong>Source:</strong> Not enough historical data yet for a source signal.</span>`;
       return `
         <div class="v3-priority-row tone-${model.combinedTone}">
           <div class="v3-priority-top">
@@ -2713,7 +2710,8 @@
             <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
             <span class="v3-chip ${model.status}">${model.statusLabel}</span>
           </div>
-          ${reasonHtml}
+          ${deptReasonHtml}
+          ${sourceReasonHtml}
         </div>`;
     }
 
