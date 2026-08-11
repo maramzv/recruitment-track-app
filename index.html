@@ -187,6 +187,9 @@
     .v3-rank-badge.tone-red { background: #e74c3c; }
     .v3-rank-badge.tone-yellow { background: #e6a400; }
     .v3-rank-badge.tone-green { background: #2e9e5b; }
+    .v3-note { background: #f0ebff; border-left: 3px solid #6c5ce7; border-radius: 4px; padding: 10px 14px; margin-bottom: 20px; }
+    .v3-note summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #4a3f8c; }
+    .v3-note p { margin: 8px 0 0 0; font-size: 13px; color: #4a3f8c; line-height: 1.5; }
 
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
@@ -782,6 +785,15 @@
 
   <div class="tab-panel" id="tab-intelligence-v3">
     <p class="analytics-subtitle" style="margin-bottom: 16px;">Redesign: one consistent scoring method (retention x performance, retention anchored to the 80% industry-healthy floor) instead of the conflicting logic in v1/v2. Groups under 5 historical hires are shown but excluded from scoring. Spec: ideas/3rd version of int tab.</p>
+
+    <details class="v3-note">
+      <summary>ℹ️ General Recruiter Note</summary>
+      <p><strong>Use historical signals as conversation guides, not candidate verdicts.</strong></p>
+      <p>Source and department patterns describe what has happened historically; they do not determine how an individual candidate will perform or how long they will stay.</p>
+      <p>These signals should help recruiters ask better questions and identify areas worth validating, not determine whether a candidate is qualified or should move forward.</p>
+      <p>Where the historical sample is small, treat the signal with additional caution. A pattern based on a limited number of hires should not be interpreted with the same confidence as a pattern supported by a larger sample.</p>
+      <p><strong>Historical signals should determine what you investigate, not what you conclude.</strong></p>
+    </details>
 
     <div class="analytics-card" id="v3CandidateActionsCard">
       <h2>Candidate Actions</h2>
@@ -2407,6 +2419,13 @@
     const V3_MIN_SAMPLE = 5;
     const V3_RETENTION_FLOOR = 80;
 
+    // Plain form for the bucket templates (Insight lines), which already wrap this in
+    // their own parentheses — the qualifier there reads as doubled-up parens and too
+    // wordy. The ranking tables still use v3RetentionPhrase below for the qualifier.
+    function v3RetentionPlain(retention) {
+      return `${retention.toFixed(0)}% retention`;
+    }
+
     function v3RetentionPhrase(retention) {
       if (retention >= V3_RETENTION_FLOOR) return `${retention.toFixed(0)}% retention`;
       if (retention >= 65) return `${retention.toFixed(0)}% retention (below healthy retention)`;
@@ -2456,48 +2475,120 @@
     const V3_SOURCE_TEMPLATES = {
       "High/High": (ctx) => ({
         badge: "🟢 Protect & Prioritize",
-        insight: `${ctx.source} is one of your strongest channels: hires here historically stay (${v3RetentionPhrase(ctx.retention)}) and perform well (${ctx.performance.toFixed(1)}/4).`,
-        recs: ["Move at normal pace, this is a strong match", "Don't let a good candidate go cold on process speed alone"]
+        insight: `${ctx.source} is one of your strongest channels: hires here historically stay (${v3RetentionPlain(ctx.retention)}) and perform well (${ctx.performance.toFixed(1)}/4).`,
+        recs: [
+          "Keep the candidate moving through the process without unnecessary delays when they otherwise meet the role requirements",
+          "Use this historical pattern as a positive signal, while still evaluating the candidate against the role's requirements and expectations"
+        ],
+        questions: [
+          "What are you looking for in your next role that would make you want to stay long term?",
+          "What matters most to you when deciding whether a company and role are the right fit?",
+          "Tell me about a role or team where you stayed and performed well. What made that experience work for you?"
+        ]
       }),
       "High/Low": (ctx) => ({
-        badge: "🟡 Verify Skill Match",
-        insight: `${ctx.source} hires stick around (${v3RetentionPhrase(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(1)}/4).`,
-        recs: ["Verify skills concretely match this role's requirements in the interview", "The risk here is capability, not commitment"]
+        badge: "🟡 Validate Skill Match",
+        insight: `${ctx.source} hires stick around (${v3RetentionPlain(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(1)}/4).`,
+        recs: [
+          "Focus the interview on the role's must-have skills and ask the candidate to demonstrate relevant experience in practice",
+          "Treat this historical pattern as a prompt for deeper skill validation, not as a reason to screen out the candidate"
+        ],
+        questions: [
+          "Which parts of this role could you own immediately?",
+          "Tell me about a time you had to apply this skill in a real situation. What was the outcome?",
+          "Which areas of this role would you expect to need the most support getting up to speed?",
+          "What is a skill you had to develop quickly in a previous role, and how did you approach it?"
+        ]
       }),
       "Low/High": (ctx) => ({
-        badge: "🟡 Confirm Intent",
-        insight: `${ctx.source} hires perform well (${ctx.performance.toFixed(1)}/4) but don't stay long (${v3RetentionPhrase(ctx.retention)}).`,
-        recs: ["Ask directly why they're job hunting and what they want long-term", "Capability isn't in question here, commitment is"]
+        badge: "🟡 Confirm Long-Term Fit",
+        insight: `${ctx.source} hires perform well (${ctx.performance.toFixed(1)}/4) but don't stay long (${v3RetentionPlain(ctx.retention)}).`,
+        recs: [
+          "Spend extra time understanding what the candidate wants from their next role and whether this position can realistically meet those expectations",
+          "Use the historical pattern to explore long-term fit without assuming the same retention outcome will apply to this candidate"
+        ],
+        questions: [
+          "What are you hoping your next role gives you that your current role doesn't?",
+          "Tell me about a role where you stayed for several years. What made you want to stay?",
+          "What factors have influenced your decision to leave previous roles?",
+          "What would need to be true for you to see yourself staying in this role for several years?"
+        ]
       }),
       "Low/Low": (ctx) => ({
-        badge: "🔴 Extra Scrutiny",
-        insight: `${ctx.source} is your weakest channel on both retention (${v3RetentionPhrase(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
-        recs: ["Verify skills directly against role requirements in interview", "Ask directly why they're job hunting and what they want long-term"]
+        badge: "🔴 Validate Fit Closely",
+        insight: `${ctx.source} is your weakest channel on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        recs: [
+          "Validate both the candidate's core skills and expectations for the role before moving forward",
+          "Probe more deeply where the candidate's experience, motivation, or expectations do not clearly align with the position",
+          "Treat the historical pattern as a prompt for additional validation, not as a conclusion about the individual candidate"
+        ],
+        questions: [
+          "Which requirements of this role are you most confident you can handle from day one?",
+          "Tell me about a time you had to succeed in an environment that was unfamiliar to you.",
+          "Where would you expect to need additional support in this role?",
+          "What are you looking for in your next role, and what would make you want to stay long term?"
+        ]
       })
     };
 
     const V3_DEPT_TEMPLATES = {
       "High/High": (ctx) => ({
-        badge: "🟢 Team Strength, Use It",
-        insight: `${ctx.department} is one of your strongest-performing teams (${v3RetentionPhrase(ctx.retention)}, ${ctx.performance.toFixed(1)}/4 performance).`,
-        recs: ["Lead with this team's numbers if the candidate is weighing competing offers", "Genuine selling point, use it in the close"]
+        badge: "🟢 Sell the Team Advantage",
+        insight: `${ctx.department} is one of your strongest-performing teams (${v3RetentionPlain(ctx.retention)}, ${ctx.performance.toFixed(1)}/4 performance).`,
+        recs: [
+          "Use the team's historical track record as a genuine selling point when discussing why this role could be a strong long-term opportunity",
+          "Highlight relevant aspects of the team, manager, and growth environment when the candidate is evaluating culture or comparing opportunities",
+          "Continue evaluating the candidate based on their individual qualifications rather than assuming the team-level pattern will repeat"
+        ],
+        questions: [
+          "What makes a team somewhere you can see yourself staying long term?",
+          "Tell me about a team environment where you did your best work. What made it effective?",
+          "What would make you choose one team over another if the roles were otherwise similar?"
+        ]
       }),
       "High/Low": (ctx) => ({
-        badge: "🟡 Support Skill Ramp-Up",
-        insight: `${ctx.department} retains well (${v3RetentionPhrase(ctx.retention)}) but underperforms relative to other teams (${ctx.performance.toFixed(1)}/4).`,
-        recs: ["Flag for extra onboarding/ramp-up support, not a hiring red flag", "No extra interview scrutiny needed on fit, this is a support issue"]
+        badge: "🟡 Plan for Skill Development",
+        insight: `${ctx.department} retains well (${v3RetentionPlain(ctx.retention)}) but underperforms relative to other teams (${ctx.performance.toFixed(1)}/4).`,
+        recs: [
+          "Focus on whether the candidate's core skills meet the role's requirements and identify any gaps that may require development",
+          "Explore how the candidate has previously learned new skills or become effective in unfamiliar environments",
+          "Treat the historical pattern as a potential development-planning signal, not as a negative judgment about overall fit"
+        ],
+        questions: [
+          "Which parts of this role are you strongest in today?",
+          "What skill would you expect to develop further in your first 90 days?",
+          "Tell me about a time you had to become effective in an unfamiliar environment. What did you do?",
+          "How do you typically approach building a skill that you don't yet have?"
+        ]
       }),
       "Low/High": (ctx) => ({
-        badge: "🟡 Address Retention Risk",
-        insight: `${ctx.department} produces strong performers (${ctx.performance.toFixed(1)}/4) but struggles to retain them (${v3RetentionPhrase(ctx.retention)}).`,
-        recs: ["Talk to the hiring manager about role or team dynamics before finalizing", "Not a candidate-quality issue, likely an environment one"]
+        badge: "🟡 Explore Retention Drivers",
+        insight: `${ctx.department} produces strong performers (${ctx.performance.toFixed(1)}/4) but struggles to retain them (${v3RetentionPlain(ctx.retention)}).`,
+        recs: [
+          "Explore what the candidate needs from the role, manager, and team to see themselves staying long term",
+          "Discuss relevant role or team considerations with the hiring manager before finalizing the hire",
+          "Use the historical pattern to guide retention questions without assuming it predicts this candidate's outcome"
+        ],
+        questions: [
+          "What would make this role a place you could see yourself staying for several years?",
+          "Tell me about a manager or team environment where you performed at your best. What specifically made it work?",
+          "What factors have caused you to leave previous roles, and what would you want to be different this time?",
+          "What kind of growth or responsibility would keep you engaged over the next few years?"
+        ]
       }),
       "Low/Low": (ctx) => ({
-        badge: "🔴 Prioritize Fit & Comp",
-        insight: `${ctx.department} is your weakest team on both retention (${v3RetentionPhrase(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        badge: "🔴 Validate Fit & Expectations",
+        insight: `${ctx.department} is your weakest team on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
         recs: [
-          "Prioritize verifying skill and culture fit closely in the interview",
-          `Confirm comp is competitive (historical average here: $${Math.round(ctx.avgSalary || 0).toLocaleString()})`
+          "Validate the candidate's skills, expectations, and long-term fit before moving forward",
+          "Confirm that the role, team environment, growth opportunities, and compensation expectations are aligned on both sides",
+          "Use the historical pattern to identify areas for deeper discussion rather than treating it as a prediction about the individual candidate"
+        ],
+        questions: [
+          "Which parts of this role are you most prepared to take on immediately?",
+          "Tell me about an environment where you struggled initially but eventually became successful. What helped?",
+          "What would you need from your manager and team to be successful here?",
+          "What are your expectations around compensation, growth, and the kind of environment you want to work in?"
         ]
       })
     };
@@ -2525,6 +2616,8 @@
           <p class="v3-box-text">${tpl.insight}</p>
           <div class="v3-box-label">Recommendation</div>
           <ul>${tpl.recs.map(r => `<li>${r}</li>`).join("")}</ul>
+          <div class="v3-box-label">Recruiter Questions</div>
+          <ul>${tpl.questions.map(q => `<li>${q}</li>`).join("")}</ul>
         </div>`;
     }
 
