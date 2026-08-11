@@ -165,6 +165,8 @@
     .v3-combined-badge.tone-red { background: #e74c3c; }
     .v3-combined-badge.tone-yellow { background: #c98f00; }
     .v3-combined-badge.tone-green { background: #2e9e5b; }
+    .v3-combined-badge.tone-orange { background: #d4711a; }
+    .v3-signal-subtitle { font-size: 12px; color: #666; font-style: italic; margin: -2px 0 6px 0; }
     .v3-candidate-name { font-size: 14px; color: #333; }
     .v3-candidate-name strong { color: #111; }
     .v3-chip { font-size: 11px; padding: 2px 9px; border-radius: 10px; white-space: nowrap; }
@@ -192,6 +194,7 @@
     .v3-priority-row.tone-red { border-left-color: #e74c3c; background: #fff6f5; }
     .v3-priority-row.tone-yellow { border-left-color: #e6a400; background: #fffaf0; }
     .v3-priority-row.tone-green { border-left-color: #2e9e5b; background: #f3fbf6; }
+    .v3-priority-row.tone-orange { border-left-color: #d4711a; background: #fff5eb; }
     .v3-priority-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 4px; }
     .v3-priority-reason { display: block; font-size: 13px; color: #333; line-height: 1.4; }
     .v3-priority-reason + .v3-priority-reason { margin-top: 4px; }
@@ -2658,25 +2661,60 @@
         </div>`;
     }
 
-    const V3_TONE_RANK = { red: 0, yellow: 1, green: 2 };
+    // Signal Pattern: replaces the old worst-of-the-two "Combined" badge. Source and
+    // Department tones are never averaged or ranked against each other — instead each
+    // green/yellow/red pairing maps to one of six named patterns (see
+    // ideas/v3-combined-label-rethink for the full reasoning). Red+Red isn't "worse" than
+    // Green+Red in a simple severity sense — Green+Red (CONFLICT) means the signals
+    // disagree and need investigation, not that the candidate is "better" than a Red+Red.
+    const V3_SIGNAL_PATTERNS = {
+      "green-green": { emoji: "🟢", label: "FAVORABLE", subtitle: "Historical signals point in a positive direction", tone: "green" },
+      "green-yellow": { emoji: "🟢", label: "PROMISING", subtitle: "Historical signals are generally positive, with one area to validate", tone: "green" },
+      "yellow-green": { emoji: "🟢", label: "PROMISING", subtitle: "Historical signals are generally positive, with one area to validate", tone: "green" },
+      "yellow-yellow": { emoji: "🟡", label: "INCONCLUSIVE", subtitle: "Historical signals do not provide enough clarity to draw a conclusion", tone: "yellow" },
+      "green-red": { emoji: "🟠", label: "CONFLICT", subtitle: "Historical signals point in different directions", tone: "orange" },
+      "red-green": { emoji: "🟠", label: "CONFLICT", subtitle: "Historical signals point in different directions", tone: "orange" },
+      "yellow-red": { emoji: "🔴", label: "CONCERN", subtitle: "A historical concern is worth investigating", tone: "red" },
+      "red-yellow": { emoji: "🔴", label: "CONCERN", subtitle: "A historical concern is worth investigating", tone: "red" },
+      "red-red": { emoji: "🔴", label: "FLAGGED", subtitle: "Multiple historical patterns warrant deeper investigation", tone: "red" }
+    };
+
+    // Single-signal fallbacks for when Source or Department has too few historical hires
+    // (n<5) to score — never silently paired with a fake tone for the missing side.
+    const V3_SIGNAL_PATTERN_SINGLE = {
+      green: { emoji: "🟢", label: "FAVORABLE", subtitle: "The one available historical signal points positively (the other has too little data to score)", tone: "green" },
+      yellow: { emoji: "🟡", label: "INCONCLUSIVE", subtitle: "The one available historical signal is unclear (the other has too little data to score)", tone: "yellow" },
+      red: { emoji: "🔴", label: "CONCERN", subtitle: "The one available historical signal raises a concern (the other has too little data to score)", tone: "red" }
+    };
+
+    const V3_SIGNAL_PATTERN_NONE = { emoji: "🟡", label: "INCONCLUSIVE", subtitle: "Not enough historical data on source or department yet to form a signal", tone: "yellow" };
+
+    // Severity order for sorting only — not a claim that CONFLICT is "worse" or "better"
+    // than CONCERN, just a fixed position so the list has a stable, explainable order.
+    const V3_PATTERN_RANK = { FLAGGED: 0, CONCERN: 1, CONFLICT: 2, INCONCLUSIVE: 3, PROMISING: 4, FAVORABLE: 5 };
+
+    function v3SignalPattern(sourceTone, deptTone) {
+      if (sourceTone && deptTone) return V3_SIGNAL_PATTERNS[`${sourceTone}-${deptTone}`];
+      const single = sourceTone || deptTone;
+      return single ? V3_SIGNAL_PATTERN_SINGLE[single] : V3_SIGNAL_PATTERN_NONE;
+    }
 
     function v3BuildCandidateCard(candidate, sourceScored, deptScored) {
       const sourceEntry = sourceScored.find(e => e.row.source === candidate.source) || null;
       const deptEntry = deptScored.find(e => e.row.department === candidate.department) || null;
 
-      const tones = [sourceEntry, deptEntry].filter(Boolean).map(e => e.tone);
-      const combinedTone = tones.length === 0 ? "green" : tones.reduce((a, b) => V3_TONE_RANK[a] <= V3_TONE_RANK[b] ? a : b);
+      const pattern = v3SignalPattern(sourceEntry ? sourceEntry.tone : null, deptEntry ? deptEntry.tone : null);
 
       const days = candidate.lastContact ? Math.floor((new Date() - new Date(candidate.lastContact)) / 86400000) : 0;
       const status = days >= 15 ? "overdue" : days >= 8 ? "attention" : "ontrack";
       const statusLabel = status === "overdue" ? `⏱ Overdue, ${days} days` : status === "attention" ? `⏱ Needs Attention, ${days} days` : `✅ On Track, ${days} days`;
 
-      const isOverdueRisk = status === "overdue" && combinedTone !== "green";
+      const isOverdueRisk = status === "overdue" && pattern.tone !== "green";
 
       return {
-        candidate, combinedTone, status, statusLabel, isOverdueRisk,
+        candidate, pattern, status, statusLabel, isOverdueRisk,
         sourceEntry, deptEntry,
-        sortKey: [isOverdueRisk ? 0 : 1, V3_TONE_RANK[combinedTone], -days]
+        sortKey: [isOverdueRisk ? 0 : 1, V3_PATTERN_RANK[pattern.label], -days]
       };
     }
 
@@ -2704,12 +2742,13 @@
         ? `<span class="v3-priority-reason"><strong>${sourceReason.kind}:</strong> ${sourceReason.badge} &mdash; ${sourceReason.insight}</span>`
         : `<span class="v3-priority-reason"><strong>Source:</strong> Not enough historical data yet for a source signal.</span>`;
       return `
-        <div class="v3-priority-row tone-${model.combinedTone}">
+        <div class="v3-priority-row tone-${model.pattern.tone}">
           <div class="v3-priority-top">
-            <span class="v3-combined-badge tone-${model.combinedTone}">${model.combinedTone === "red" ? "🔴" : model.combinedTone === "yellow" ? "🟡" : "🟢"} Combined</span>
+            <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${model.pattern.label}</span>
             <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
             <span class="v3-chip ${model.status}">${model.statusLabel}</span>
           </div>
+          <div class="v3-signal-subtitle">${model.pattern.subtitle}</div>
           ${deptReasonHtml}
           ${sourceReasonHtml}
         </div>`;
@@ -2721,10 +2760,11 @@
       return `
         <div class="v3-candidate-card">
           <div class="v3-candidate-header">
-            <span class="v3-combined-badge tone-${model.combinedTone}">${model.combinedTone === "red" ? "🔴" : model.combinedTone === "yellow" ? "🟡" : "🟢"} Combined</span>
+            <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${model.pattern.label}</span>
             <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
             <span class="v3-chip ${model.status}">${model.statusLabel}</span>
           </div>
+          <div class="v3-signal-subtitle">${model.pattern.subtitle}</div>
           <div class="v3-boxes">
             ${v3BoxHtml("Source", c.source, model.sourceEntry, avgSalary)}
             ${v3BoxHtml("Department", c.department, model.deptEntry, avgSalary)}
