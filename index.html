@@ -187,6 +187,13 @@
     .v3-rank-badge.tone-red { background: #e74c3c; }
     .v3-rank-badge.tone-yellow { background: #e6a400; }
     .v3-rank-badge.tone-green { background: #2e9e5b; }
+    .v3-priority-row { border: 1px solid #eee; border-left-width: 4px; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+    .v3-priority-row:last-child { margin-bottom: 0; }
+    .v3-priority-row.tone-red { border-left-color: #e74c3c; background: #fff6f5; }
+    .v3-priority-row.tone-yellow { border-left-color: #e6a400; background: #fffaf0; }
+    .v3-priority-row.tone-green { border-left-color: #2e9e5b; background: #f3fbf6; }
+    .v3-priority-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .v3-priority-reason { display: block; font-size: 13px; color: #333; line-height: 1.4; }
     .v3-note { background: #f0ebff; border-left: 3px solid #6c5ce7; border-radius: 4px; padding: 10px 14px; margin-bottom: 20px; }
     .v3-note summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #4a3f8c; }
     .v3-note p { margin: 8px 0 0 0; font-size: 13px; color: #4a3f8c; line-height: 1.5; }
@@ -794,6 +801,12 @@
       <p>Where the historical sample is small, treat the signal with additional caution. A pattern based on a limited number of hires should not be interpreted with the same confidence as a pattern supported by a larger sample.</p>
       <p><strong>Historical signals should determine what you investigate, not what you conclude.</strong></p>
     </details>
+
+    <div class="analytics-card" id="v3PriorityOverviewCard">
+      <h2>Priority Overview (Draft)</h2>
+      <p class="analytics-subtitle">Condensed version of Candidate Actions below: every active candidate ranked by urgency, one line each, with the single strongest reason to look closer. Same scoring, just easier to skim.</p>
+      <div id="v3PriorityOverviewBody"></div>
+    </div>
 
     <div class="analytics-card" id="v3CandidateActionsCard">
       <h2>Candidate Actions</h2>
@@ -2411,8 +2424,9 @@
     // - Quadrant (candidate cards + ranking badge color): Retention x Performance,
     //   computed independently for a candidate's Source and their Department.
     //   Retention High/Low is anchored to the 80% industry-healthy floor (external,
-    //   not relative to our own data). Performance High/Low is a median split within
-    //   the group, ties default to Low (the more cautious bucket).
+    //   not relative to our own data). Performance High/Low is anchored to 3/4
+    //   ("Fully Meets" expectations) — at/above is High, below is Low. Both floors
+    //   are fixed thresholds, not relative to the rest of the group.
     // - Groups with under 5 historical hires are excluded from scoring/quadrants but
     //   still shown, with a note, never silently hidden.
     // - Manager is dropped entirely: it's one-to-many with department (a department
@@ -2422,6 +2436,7 @@
 
     const V3_MIN_SAMPLE = 5;
     const V3_RETENTION_FLOOR = 80;
+    const V3_PERFORMANCE_FLOOR = 3;
 
     // Plain form for the bucket templates (Insight lines), which already wrap this in
     // their own parentheses — the qualifier there reads as doubled-up parens and too
@@ -2436,12 +2451,6 @@
       return `${retention.toFixed(0)}% retention (well below healthy retention)`;
     }
 
-    function v3Median(values) {
-      const sorted = [...values].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-    }
-
     // Scores and quadrant-classifies a group of source or department stat rows.
     // Score is absolute (each row scored on its own numbers only, never compared
     // against the rest of the group): average of Retention% and Performance
@@ -2450,8 +2459,9 @@
     // floor (1 -> 0) and ceiling (4 -> 100), not a floor of 0 that no one can score.
     // Quadrant classification (used by the Candidate Actions cards, not the ranking
     // table) is unrelated to score and stays as-is: High/Low retention anchored to
-    // the 80% floor, High/Low performance via median split within the group (ties
-    // go Low), both computed on the raw 1-4 performance value.
+    // the 80% floor, High/Low performance anchored to 3/4 ("Fully Meets"), both fixed
+    // thresholds computed on this group's own Workforce Analytics averages (retField/
+    // perfField), never against the rest of the group.
     // Returns { scored: [...sorted by score desc, each with score/retTier/perfTier/
     // quadrant/tone], excluded: [...n<5 rows, unscored] }.
     function v3ScoreGroup(stats, nField, retField, perfField) {
@@ -2459,14 +2469,12 @@
       const excluded = stats.filter(s => s[nField] < V3_MIN_SAMPLE);
       if (eligible.length === 0) return { scored: [], excluded };
 
-      const perfMedian = v3Median(eligible.map(s => s[perfField]));
-
       const scored = eligible.map(s => {
         const retention = s[retField];
         const performance = s[perfField];
         const score = (retention + ((performance - 1) / 3) * 100) / 2;
         const retTier = retention >= V3_RETENTION_FLOOR ? "High" : "Low";
-        const perfTier = performance > perfMedian ? "High" : "Low";
+        const perfTier = performance >= V3_PERFORMANCE_FLOOR ? "High" : "Low";
         const quadrant = retTier + "/" + perfTier;
         const tone = retTier === "High" && perfTier === "High" ? "green"
           : retTier === "Low" && perfTier === "Low" ? "red" : "yellow";
@@ -2476,10 +2484,24 @@
       return { scored, excluded };
     }
 
+    // Hand-authored insight sentences per source, so wording reflects each source's actual
+    // standing (e.g. Indeed's 76% retention is mid-pack, not "your weakest") instead of one
+    // reused sentence per quadrant regardless of how extreme the underlying number is.
+    // Falls back to the quadrant's generic sentence for any source not listed here.
+    const V3_SOURCE_INSIGHT_OVERRIDES = {
+      "CareerBuilder": (ctx) => `CareerBuilder is weak on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(2)}/4).`,
+      "Diversity Job Fair": (ctx) => `Diversity Job Fair hires meet expectations (${ctx.performance.toFixed(2)}/4) but don't stay long (${v3RetentionPlain(ctx.retention)}).`,
+      "Employee Referral": (ctx) => `Employee Referral is your strongest channel: hires here historically stay (${v3RetentionPlain(ctx.retention)}) and perform well (${ctx.performance.toFixed(2)}/4).`,
+      "Google Search": (ctx) => `Google Search hires have the lowest retention (${ctx.retention.toFixed(0)}%) and relatively low performance (${ctx.performance.toFixed(2)}/4).`,
+      "Indeed": (ctx) => `Indeed hires don't stay as long (${ctx.retention.toFixed(0)}% retention) and have relatively low performance (${ctx.performance.toFixed(2)}/4).`,
+      "LinkedIn": (ctx) => `LinkedIn hires meet expectations (${ctx.performance.toFixed(2)}/4) but don't stay long (${v3RetentionPlain(ctx.retention)}).`,
+      "Website": (ctx) => `Website hires stick around (${v3RetentionPlain(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(2)}/4).`
+    };
+
     const V3_SOURCE_TEMPLATES = {
       "High/High": (ctx) => ({
         badge: "🟢 Protect & Prioritize",
-        insight: `${ctx.source} is one of your strongest channels: hires here historically stay (${v3RetentionPlain(ctx.retention)}) and perform well (${ctx.performance.toFixed(1)}/4).`,
+        insight: V3_SOURCE_INSIGHT_OVERRIDES[ctx.source] ? V3_SOURCE_INSIGHT_OVERRIDES[ctx.source](ctx) : `${ctx.source} is one of your strongest channels: hires here historically stay (${v3RetentionPlain(ctx.retention)}) and perform well (${ctx.performance.toFixed(2)}/4).`,
         recs: [
           "Keep the candidate moving through the process without unnecessary delays when they otherwise meet the role requirements",
           "Use this historical pattern as a positive signal, while still evaluating the candidate against the role's requirements and expectations"
@@ -2492,7 +2514,7 @@
       }),
       "High/Low": (ctx) => ({
         badge: "🟡 Validate Skill Match",
-        insight: `${ctx.source} hires stick around (${v3RetentionPlain(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(1)}/4).`,
+        insight: V3_SOURCE_INSIGHT_OVERRIDES[ctx.source] ? V3_SOURCE_INSIGHT_OVERRIDES[ctx.source](ctx) : `${ctx.source} hires stick around (${v3RetentionPlain(ctx.retention)}) but underperform relative to other channels (${ctx.performance.toFixed(2)}/4).`,
         recs: [
           "Focus the interview on the role's must-have skills and ask the candidate to demonstrate relevant experience in practice",
           "Treat this historical pattern as a prompt for deeper skill validation, not as a reason to screen out the candidate"
@@ -2506,7 +2528,7 @@
       }),
       "Low/High": (ctx) => ({
         badge: "🟡 Confirm Long-Term Fit",
-        insight: `${ctx.source} hires perform well (${ctx.performance.toFixed(1)}/4) but don't stay long (${v3RetentionPlain(ctx.retention)}).`,
+        insight: V3_SOURCE_INSIGHT_OVERRIDES[ctx.source] ? V3_SOURCE_INSIGHT_OVERRIDES[ctx.source](ctx) : `${ctx.source} hires perform well (${ctx.performance.toFixed(2)}/4) but don't stay long (${v3RetentionPlain(ctx.retention)}).`,
         recs: [
           "Spend extra time understanding what the candidate wants from their next role and whether this position can realistically meet those expectations",
           "Use the historical pattern to explore long-term fit without assuming the same retention outcome will apply to this candidate"
@@ -2520,7 +2542,7 @@
       }),
       "Low/Low": (ctx) => ({
         badge: "🔴 Validate Fit Closely",
-        insight: `${ctx.source} is your weakest channel on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        insight: V3_SOURCE_INSIGHT_OVERRIDES[ctx.source] ? V3_SOURCE_INSIGHT_OVERRIDES[ctx.source](ctx) : `${ctx.source} is your weakest channel on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(2)}/4).`,
         recs: [
           "Validate both the candidate's core skills and expectations for the role before moving forward",
           "Probe more deeply where the candidate's experience, motivation, or expectations do not clearly align with the position",
@@ -2535,10 +2557,21 @@
       })
     };
 
+    // Hand-authored insight sentences per department, same reasoning as the Source
+    // overrides above: wording reflects each department's actual standing instead of one
+    // reused sentence per quadrant. Falls back to the quadrant's generic sentence for any
+    // department not listed here.
+    const V3_DEPT_INSIGHT_OVERRIDES = {
+      "IT/IS": (ctx) => `IT/IS is your strongest-performing team: retention (${ctx.retention.toFixed(0)}%) and performance (${ctx.performance.toFixed(2)}/4) are both solid.`,
+      "Admin Offices": (ctx) => `Admin Offices produces hires that meet expectations (${ctx.performance.toFixed(2)}/4) but struggles to retain them (${v3RetentionPlain(ctx.retention)}).`,
+      "Software Engineering": (ctx) => `Software Engineering produces the strongest performers (${ctx.performance.toFixed(2)}/4) but struggles to retain them (${v3RetentionPlain(ctx.retention)}).`,
+      "Production": (ctx) => `Production is the weakest in retention (${ctx.retention.toFixed(0)}%) and has relatively low performance (${ctx.performance.toFixed(2)}/4).`
+    };
+
     const V3_DEPT_TEMPLATES = {
       "High/High": (ctx) => ({
         badge: "🟢 Sell the Team Advantage",
-        insight: `${ctx.department} is one of your strongest-performing teams (${v3RetentionPlain(ctx.retention)}, ${ctx.performance.toFixed(1)}/4 performance).`,
+        insight: V3_DEPT_INSIGHT_OVERRIDES[ctx.department] ? V3_DEPT_INSIGHT_OVERRIDES[ctx.department](ctx) : `${ctx.department} is one of your strongest-performing teams (${v3RetentionPlain(ctx.retention)}, ${ctx.performance.toFixed(2)}/4 performance).`,
         recs: [
           "Use the team's historical track record as a genuine selling point when discussing why this role could be a strong long-term opportunity",
           "Highlight relevant aspects of the team, manager, and growth environment when the candidate is evaluating culture or comparing opportunities",
@@ -2552,7 +2585,7 @@
       }),
       "High/Low": (ctx) => ({
         badge: "🟡 Plan for Skill Development",
-        insight: `${ctx.department} retains well (${v3RetentionPlain(ctx.retention)}) but underperforms relative to other teams (${ctx.performance.toFixed(1)}/4).`,
+        insight: V3_DEPT_INSIGHT_OVERRIDES[ctx.department] ? V3_DEPT_INSIGHT_OVERRIDES[ctx.department](ctx) : `${ctx.department} retains well (${v3RetentionPlain(ctx.retention)}) but underperforms relative to other teams (${ctx.performance.toFixed(2)}/4).`,
         recs: [
           "Focus on whether the candidate's core skills meet the role's requirements and identify any gaps that may require development",
           "Explore how the candidate has previously learned new skills or become effective in unfamiliar environments",
@@ -2567,7 +2600,7 @@
       }),
       "Low/High": (ctx) => ({
         badge: "🟡 Explore Retention Drivers",
-        insight: `${ctx.department} produces strong performers (${ctx.performance.toFixed(1)}/4) but struggles to retain them (${v3RetentionPlain(ctx.retention)}).`,
+        insight: V3_DEPT_INSIGHT_OVERRIDES[ctx.department] ? V3_DEPT_INSIGHT_OVERRIDES[ctx.department](ctx) : `${ctx.department} produces strong performers (${ctx.performance.toFixed(2)}/4) but struggles to retain them (${v3RetentionPlain(ctx.retention)}).`,
         recs: [
           "Explore what the candidate needs from the role, manager, and team to see themselves staying long term",
           "Discuss relevant role or team considerations with the hiring manager before finalizing the hire",
@@ -2582,7 +2615,7 @@
       }),
       "Low/Low": (ctx) => ({
         badge: "🔴 Validate Fit & Expectations",
-        insight: `${ctx.department} is your weakest team on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(1)}/4).`,
+        insight: V3_DEPT_INSIGHT_OVERRIDES[ctx.department] ? V3_DEPT_INSIGHT_OVERRIDES[ctx.department](ctx) : `${ctx.department} is your weakest team on both retention (${v3RetentionPlain(ctx.retention)}) and performance (${ctx.performance.toFixed(2)}/4).`,
         recs: [
           "Validate the candidate's skills, expectations, and long-term fit before moving forward",
           "Confirm that the role, team environment, growth opportunities, and compensation expectations are aligned on both sides",
@@ -2647,6 +2680,43 @@
       };
     }
 
+    // Picks whichever of a candidate's Source/Department entries is the worse-toned
+    // (red beats yellow beats green), and pulls that bucket's badge + insight sentence
+    // so the condensed row can show one reason instead of the full card's two boxes.
+    function v3DrivingReason(model) {
+      const { candidate, sourceEntry, deptEntry } = model;
+      const entries = [];
+      if (sourceEntry) entries.push({ kind: "Source", name: candidate.source, entry: sourceEntry });
+      if (deptEntry) entries.push({ kind: "Department", name: candidate.department, entry: deptEntry });
+      if (entries.length === 0) return null;
+
+      entries.sort((a, b) => V3_TONE_RANK[a.entry.tone] - V3_TONE_RANK[b.entry.tone]);
+      const picked = entries[0];
+      const templates = picked.kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[picked.entry.quadrant]({
+        source: picked.name, department: picked.name,
+        retention: picked.entry.retention, performance: picked.entry.performance
+      });
+      return { kind: picked.kind, badge: tpl.badge, insight: tpl.insight };
+    }
+
+    function v3RenderPriorityRow(model) {
+      const c = model.candidate;
+      const reason = v3DrivingReason(model);
+      const reasonHtml = reason
+        ? `<span class="v3-priority-reason"><strong>${reason.kind}:</strong> ${reason.badge} &mdash; ${reason.insight}</span>`
+        : `<span class="v3-priority-reason">Not enough historical data yet for a source or department signal.</span>`;
+      return `
+        <div class="v3-priority-row tone-${model.combinedTone}">
+          <div class="v3-priority-top">
+            <span class="v3-combined-badge tone-${model.combinedTone}">${model.combinedTone === "red" ? "🔴" : model.combinedTone === "yellow" ? "🟡" : "🟢"} Combined</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          ${reasonHtml}
+        </div>`;
+    }
+
     function v3RenderCandidateCard(model, avgSalaryByDept) {
       const c = model.candidate;
       const avgSalary = avgSalaryByDept[c.department];
@@ -2684,7 +2754,7 @@
         <tr>
           <td><span class="v3-rank-badge tone-${e.tone}"></span>${e.row[nameField]}</td>
           <td>${v3RetentionPhrase(e.retention)}</td>
-          <td>${e.performance.toFixed(1)} / 4</td>
+          <td>${e.performance.toFixed(2)} / 4</td>
           ${isDept ? `<td>${e.row.avgSatisfaction.toFixed(1)} / 5</td><td>${e.row.avgEngagement.toFixed(2)} / 5</td>` : ""}
           <td>${e.score.toFixed(1)}</td>
         </tr>`).join("");
@@ -2752,6 +2822,10 @@
       document.getElementById("v3CandidateActionsBody").innerHTML = cards.length > 0
         ? `<div class="v3-card-list">${cards.map(m => v3RenderCandidateCard(m, avgSalaryByDept)).join("")}</div>`
         : `<p class="insight-empty">No active candidates yet, add or load candidates to see actions here.</p>`;
+
+      document.getElementById("v3PriorityOverviewBody").innerHTML = cards.length > 0
+        ? cards.map(v3RenderPriorityRow).join("")
+        : `<p class="insight-empty">No active candidates yet, add or load candidates to see the priority overview here.</p>`;
 
       // --- Source Insights & Recommendations ---
       const sourcePipelineCounts = countBy(activePipeline, "source");
