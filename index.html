@@ -921,6 +921,12 @@
       <div id="v5EngineQaBody"></div>
     </div>
 
+    <div class="analytics-card" id="v5CompareQaCard">
+      <h2>v5 vs v3: Bucket Comparison</h2>
+      <p class="analytics-subtitle">Informational, not a pass/fail test: v5 is expected to disagree with v3 sometimes, since the 25-state matrix draws distinctions (Needs Validation vs Conflict, Inconclusive reserved strictly for missing data) that v3's single blended tone comparison can't make. Shows where and roughly why the two tabs currently diverge for the same active candidates.</p>
+      <div id="v5CompareQaBody"></div>
+    </div>
+
     <div class="analytics-card" id="v5PriorityCard">
       <h2>Priority Overview</h2>
       <p class="analytics-subtitle">Every active candidate, ranked by Candidate Signal severity. Click a candidate to jump to their full card below.</p>
@@ -3598,6 +3604,18 @@
         </div>`;
     }
 
+    // Names which side is missing when a candidate's signal is Inconclusive, so the
+    // recruiter never has to infer it from the evidence grid alone.
+    function v5MissingDataNote(model) {
+      if (model.signal.isComplete) return "";
+      const sourceMissing = model.sourceSignal.retention === "unavailable";
+      const deptMissing = model.deptSignal.retention === "unavailable";
+      if (sourceMissing && deptMissing) return "Neither Source nor Department has enough historical hires (minimum 5) to form a signal.";
+      if (sourceMissing) return "Source doesn't have enough historical hires (minimum 5) yet, so only the Department signal is available.";
+      if (deptMissing) return "Department doesn't have enough historical hires (minimum 5) yet, so only the Source signal is available.";
+      return "";
+    }
+
     function v5JumpToCard(cardId) {
       const el = document.getElementById(cardId);
       if (!el) return;
@@ -3632,6 +3650,7 @@
             <span class="v3-chip ${model.status}">${model.statusLabel}</span>
           </div>
           <div class="v3-signal-subtitle">${model.signal.meaning}</div>
+          ${v5MissingDataNote(model) ? `<div class="v3-signal-subtitle">${v5MissingDataNote(model)}</div>` : ""}
           <div class="v3-box-label">Historical Signal</div>
           ${v5EvidenceGridHtml(model)}
           <div class="v3-boxes">
@@ -3639,6 +3658,57 @@
             ${v5ActionSectionHtml("Department", c.department, model.deptEntry)}
           </div>
         </div>`;
+    }
+
+    // Compares v5's Candidate Signal against v3's Signal Pattern for the same
+    // candidate, side by side. This is informational, not a pass/fail test — v5 is
+    // expected to disagree with v3 sometimes, that's the whole point of the 25-state
+    // matrix (e.g. distinguishing Needs Validation from Conflict, or reserving
+    // Inconclusive strictly for missing data instead of also using it for
+    // yellow-yellow mixed-tone pairs). Reads v3BuildCandidateCard read-only, purely
+    // for comparison — nothing here feeds back into either engine.
+    function v5CompareLabel(bucket) {
+      return V5_BUCKET_META[bucket].label;
+    }
+
+    function renderV5CompareQa(pairs) {
+      const body = document.getElementById("v5CompareQaBody");
+      if (!body) return;
+
+      if (pairs.length === 0) {
+        body.innerHTML = `<p class="insight-empty">No active candidates yet, add or load candidates to run this comparison.</p>`;
+        return;
+      }
+
+      const rows = pairs.map(({ v3Card, v5Model }) => {
+        const c = v5Model.candidate;
+        const v3Label = v3Card.pattern.label;
+        const v5Label = v5CompareLabel(v5Model.signal.bucket);
+        const match = v3Label === v5Label;
+        let note = "";
+        if (!match) {
+          note = !v5Model.signal.isComplete
+            ? "v5 reserves Inconclusive strictly for missing historical data; v3 also uses its equivalent bucket for mixed-but-present signals, so the two don't always line up."
+            : "v5's 4-check matrix (same-side vs opposing-side patterns) reads this combination differently than v3's single blended tone comparison.";
+        }
+        return `
+          <tr>
+            <td>${c.name}</td>
+            <td>${v3Label}</td>
+            <td>${v5Label}</td>
+            <td>${match ? "Same" : "Differs"}</td>
+            <td>${note}</td>
+          </tr>`;
+      }).join("");
+
+      const differCount = pairs.filter(({ v3Card, v5Model }) => v3Card.pattern.label !== v5CompareLabel(v5Model.signal.bucket)).length;
+
+      body.innerHTML = `
+        <p class="analytics-subtitle">${differCount === 0 ? "v5 agrees with v3 for every active candidate right now." : `${differCount} of ${pairs.length} active candidate(s) get a different bucket under v5 than under v3, mostly where the new matrix distinguishes cases the old tone-pair system couldn't.`}</p>
+        <table class="analytics-table">
+          <thead><tr><th>Candidate</th><th>v3 Bucket</th><th>v5 Bucket</th><th>Result</th><th>Why, if different</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
     }
 
     function renderIntelligenceV5() {
@@ -3652,8 +3722,15 @@
       const sourceScoring = v3ScoreGroup(getSourceStats(), "hired", "retentionRate", "avgPerformance");
       const deptScoring = v3ScoreGroup(getDepartmentStats(), "headcount", "retentionRate", "avgPerformance");
 
-      const models = activePipeline.map(c => v5BuildCandidateModel(c, sourceScoring.scored, deptScoring.scored));
-      models.sort((a, b) => {
+      // Built in activePipeline order (not yet sorted) so v3Card/v5Model stay paired
+      // by candidate for the comparison table below.
+      const pairs = activePipeline.map(c => ({
+        v3Card: v3BuildCandidateCard(c, sourceScoring.scored, deptScoring.scored),
+        v5Model: v5BuildCandidateModel(c, sourceScoring.scored, deptScoring.scored)
+      }));
+      renderV5CompareQa(pairs);
+
+      const models = pairs.map(p => p.v5Model).sort((a, b) => {
         for (let i = 0; i < a.sortKey.length; i++) {
           if (a.sortKey[i] !== b.sortKey[i]) return a.sortKey[i] - b.sortKey[i];
         }
