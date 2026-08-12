@@ -169,7 +169,7 @@
     .v3-signal-subtitle { font-size: 12px; color: #666; font-style: italic; margin: -2px 0 6px 0; }
     .v3-candidate-name { font-size: 14px; color: #333; }
     .v3-candidate-name strong { color: #111; }
-    .v3-chip { font-size: 11px; padding: 2px 9px; border-radius: 10px; white-space: nowrap; }
+    .v3-chip { font-size: 11px; padding: 2px 9px; border-radius: 10px; white-space: nowrap; background: #eee; color: #555; }
     .v3-chip.overdue { background: #ffe3e0; color: #b0362a; }
     .v3-chip.attention { background: #fff3cd; color: #8a6100; }
     .v3-chip.ontrack { background: #e6f7ec; color: #1e7e45; }
@@ -345,6 +345,7 @@
     <button class="tab-btn" onclick="showTab('intelligence', this)">Hiring Intelligence</button>
     <button class="tab-btn" onclick="showTab('intelligence-v2', this)">Hiring Intelligence v2</button>
     <button class="tab-btn" onclick="showTab('intelligence-v3', this)">Hiring Intelligence v3</button>
+    <button class="tab-btn" onclick="showTab('intelligence-v4', this)">Hiring Intelligence v4</button>
   </div>
 
   <p class="tab-tagline" id="tabTagline">What is happening now.</p>
@@ -844,6 +845,16 @@
     </div>
   </div>
 
+  <div class="tab-panel" id="tab-intelligence-v4">
+    <p class="analytics-subtitle" style="margin-bottom: 16px;">Same scoring engine as v3 (retention x performance, same 80% retention / 3-of-4 performance floors, same six-bucket Signal Pattern) — this version only changes how it's presented to a recruiter. v3 stays as-is for comparison. Spec: ideas/0-highering intelligence explained/plan.</p>
+
+    <div class="analytics-card" id="v4ShellCard">
+      <h2>Candidate Signals (Draft)</h2>
+      <p class="analytics-subtitle">Milestone V4.2: same six buckets, same source/department scoring as v3 — reorganized so the signal comes first, then why, then what to do, with raw numbers and interview questions tucked behind "Historical evidence".</p>
+      <div id="v4CandidateBody"></div>
+    </div>
+  </div>
+
   <script src="employeeData.js"></script>
   <script>
     let candidates = [];
@@ -931,7 +942,8 @@
       analytics: "What happened after people were hired.",
       intelligence: "What the AI recommends based on both.",
       "intelligence-v2": "Draft restructure: prioritized candidate signals first, benchmarks as reference.",
-      "intelligence-v3": "One consistent scoring method: retention x performance, independently for source and department."
+      "intelligence-v3": "One consistent scoring method: retention x performance, independently for source and department.",
+      "intelligence-v4": "Same scoring as v3, redesigned for recruiters: one signal, then why, then what to do."
     };
 
     function showTab(name, btn) {
@@ -1142,6 +1154,7 @@
       renderIntelligence();
       renderIntelligenceV2();
       renderIntelligenceV3();
+      renderIntelligenceV4();
     }
 
     function getTenureYears(dateOfHire, dateOfTermination) {
@@ -2918,6 +2931,136 @@
         </div>`;
 
       populateV3Selector();
+    }
+
+    // ============================================================================
+    // Hiring Intelligence v4 (Milestone V4.2 — candidate card) — presentation-only
+    // redesign on top of v3. Same v3ScoreGroup/v3BuildCandidateCard data, same six
+    // Signal Pattern buckets, same 80%/3-of-4/n>=5 thresholds, same badge/insight/
+    // recs/questions templates. Nothing here recomputes a score or invents a bucket.
+    // What changes is hierarchy: Signal -> Why -> Recruiter focus -> Follow-up ->
+    // Historical evidence (collapsed), instead of v3's two large side-by-side boxes.
+    // Spec: ideas/0-highering intelligence explained/plan.
+    // ============================================================================
+
+    // Fixed recruiter-facing rename of the internal bucket label — wording only,
+    // the underlying bucket/tone/subtitle used for sorting and coloring is untouched.
+    const V4_RECRUITER_LABELS = {
+      FAVORABLE: "Favorable",
+      PROMISING: "Promising",
+      INCONCLUSIVE: "Needs Validation",
+      CONFLICT: "Conflicting Signals",
+      CONCERN: "Concern",
+      FLAGGED: "Flagged"
+    };
+
+    // Fixed evidence vocabulary for a single Source or Department entry — four words,
+    // no synonyms. Mirrors the entry's existing tone (green/yellow/red) so it can never
+    // disagree with the ranking table or the v3 box color.
+    function v4EvidenceLabel(tone) {
+      return tone === "green" ? "Strong" : tone === "yellow" ? "Mixed" : tone === "red" ? "Concern" : "Insufficient";
+    }
+
+    function v4WhyRow(kind, name, entry) {
+      if (!entry) {
+        return `
+          <div class="v3-box tone-none">
+            <div class="v3-box-title">${kind}: ${name} <span class="v3-chip">Insufficient</span></div>
+            <p class="v3-box-text">Fewer than 5 historical hires, not enough data for a reliable ${kind.toLowerCase()} signal.</p>
+          </div>`;
+      }
+      return `
+        <div class="v3-box tone-${entry.tone}">
+          <div class="v3-box-title">${kind}: ${name} <span class="v3-chip">${v4EvidenceLabel(entry.tone)}</span></div>
+          <p class="v3-box-text">${v3RetentionPhrase(entry.retention)} &middot; ${entry.performance.toFixed(2)}/4 performance</p>
+        </div>`;
+    }
+
+    // Recruiter focus reuses the exact badge + insight sentence v3 already generates
+    // per quadrant (V3_SOURCE_TEMPLATES / V3_DEPT_TEMPLATES) rather than authoring new
+    // copy, so source and department can each contribute their own short action line.
+    function v4FocusLine(kind, name, entry) {
+      if (!entry) return "";
+      const templates = kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[entry.quadrant]({ source: name, department: name, retention: entry.retention, performance: entry.performance });
+      const badgeText = tpl.badge.replace(/^\S+\s/, "");
+      return `<li><strong>${badgeText}</strong> <span style="color:#777;">(${kind.toLowerCase()})</span> &mdash; ${tpl.insight}</li>`;
+    }
+
+    function v4EvidenceDetail(kind, name, entry) {
+      if (!entry) return "";
+      const templates = kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[entry.quadrant]({ source: name, department: name, retention: entry.retention, performance: entry.performance });
+      return `
+        <div class="v3-box tone-${entry.tone}">
+          <div class="v3-box-title">${kind}: ${name}</div>
+          <div class="v3-box-label">Recommendation</div>
+          <ul>${tpl.recs.map(r => `<li>${r}</li>`).join("")}</ul>
+          <div class="v3-box-label">Recruiter Questions</div>
+          <ul>${tpl.questions.map(q => `<li>${q}</li>`).join("")}</ul>
+        </div>`;
+    }
+
+    function v4RenderCandidateCard(model) {
+      const c = model.candidate;
+      const displayLabel = V4_RECRUITER_LABELS[model.pattern.label] || model.pattern.label;
+      const focusLines = [
+        v4FocusLine("Source", c.source, model.sourceEntry),
+        v4FocusLine("Department", c.department, model.deptEntry)
+      ].filter(Boolean).join("");
+      const evidenceDetail = [
+        v4EvidenceDetail("Source", c.source, model.sourceEntry),
+        v4EvidenceDetail("Department", c.department, model.deptEntry)
+      ].filter(Boolean).join("");
+
+      return `
+        <div class="v3-candidate-card">
+          <div class="v3-candidate-header">
+            <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${displayLabel}</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-signal-subtitle">${model.pattern.subtitle}</div>
+
+          <div class="v3-box-label" style="margin-top: 10px;">Why</div>
+          <div class="v3-boxes">
+            ${v4WhyRow("Source", c.source, model.sourceEntry)}
+            ${v4WhyRow("Department", c.department, model.deptEntry)}
+          </div>
+
+          <div class="v3-box-label" style="margin-top: 10px;">Recruiter focus</div>
+          <ul>${focusLines || "<li>No historical evidence yet for source or department.</li>"}</ul>
+
+          <details style="margin-top: 8px;">
+            <summary>Historical evidence &amp; interview questions &#9656;</summary>
+            <div class="v3-boxes" style="margin-top: 8px;">${evidenceDetail}</div>
+          </details>
+        </div>`;
+    }
+
+    // Reuses the same v3ScoreGroup/v3BuildCandidateCard output v3 already computes —
+    // no forked scoring, no new candidate sort. Only the card markup differs.
+    function renderIntelligenceV4() {
+      const body = document.getElementById("v4CandidateBody");
+      if (!body) return;
+
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+      const sourceStats = getSourceStats();
+      const deptStats = getDepartmentStats();
+      const sourceScoring = v3ScoreGroup(sourceStats, "hired", "retentionRate", "avgPerformance");
+      const deptScoring = v3ScoreGroup(deptStats, "headcount", "retentionRate", "avgPerformance");
+
+      const cards = activePipeline.map(c => v3BuildCandidateCard(c, sourceScoring.scored, deptScoring.scored));
+      cards.sort((a, b) => {
+        for (let i = 0; i < a.sortKey.length; i++) {
+          if (a.sortKey[i] !== b.sortKey[i]) return a.sortKey[i] - b.sortKey[i];
+        }
+        return 0;
+      });
+
+      body.innerHTML = cards.length > 0
+        ? `<div class="v3-card-list">${cards.map(v4RenderCandidateCard).join("")}</div>`
+        : `<p class="insight-empty">No active candidates yet, add or load candidates to see signals here.</p>`;
     }
 
     function populateV3Selector() {
