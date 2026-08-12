@@ -203,6 +203,31 @@
     .v3-note summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #4a3f8c; }
     .v3-note p { margin: 8px 0 0 0; font-size: 13px; color: #4a3f8c; line-height: 1.5; }
 
+    /* Hiring Intelligence v5 — adds blue/purple/white to the v3 tone system for the
+       new candidate-signal buckets (promising/needs-validation/inconclusive), kept
+       visually distinct from the plain green/red/white evidence dots below. */
+    .v3-combined-badge.tone-blue { background: #4a90e2; }
+    .v3-combined-badge.tone-purple { background: #6c5ce7; }
+    .v3-combined-badge.tone-white { background: #9a9a9a; }
+    .v3-box.tone-blue { border-left-color: #4a90e2; background: #f2f7fd; }
+    .v3-box.tone-purple { border-left-color: #6c5ce7; background: #f4f2fd; }
+    .v3-rank-badge.tone-blue { background: #4a90e2; }
+    .v3-rank-badge.tone-purple { background: #6c5ce7; }
+    .v3-rank-badge.tone-white { background: #9a9a9a; }
+    .v3-priority-row.tone-blue { border-left-color: #4a90e2; background: #f2f7fd; }
+    .v3-priority-row.tone-purple { border-left-color: #6c5ce7; background: #f4f2fd; }
+    .v3-priority-row.tone-white { border-left-color: #9a9a9a; background: #fafafa; }
+    .v5-evidence-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: 4px 16px; align-items: center; margin: 10px 0; }
+    .v5-evidence-grid .v5-evidence-head { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #888; }
+    .v5-evidence-grid .v5-evidence-row-label { font-size: 12px; color: #666; }
+    .v5-evidence-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .v5-evidence-dot.high { background: #2e9e5b; }
+    .v5-evidence-dot.low { background: #e74c3c; }
+    .v5-evidence-dot.unavailable { background: #ccc; }
+    .v5-evidence-summary { font-size: 12px; color: #555; margin-top: 2px; }
+    .v5-recruiter-focus { font-size: 13px; color: #333; margin: 6px 0; }
+    .v5-recruiter-focus strong { color: #111; }
+
     /* Table cell hierarchy (grouped columns) */
     .cell-primary { font-weight: bold; }
     .cell-secondary { font-size: 12px; color: #666; }
@@ -347,6 +372,7 @@
     <button class="tab-btn" onclick="showTab('intelligence-v2', this)">Hiring Intelligence v2</button>
     <button class="tab-btn" onclick="showTab('intelligence-v3', this)">Hiring Intelligence v3</button>
     <button class="tab-btn" onclick="showTab('intelligence-v4', this)">Hiring Intelligence v4</button>
+    <button class="tab-btn" onclick="showTab('intelligence-v5', this)">Hiring Intelligence v5</button>
   </div>
 
   <p class="tab-tagline" id="tabTagline">What is happening now.</p>
@@ -886,6 +912,28 @@
     </div>
   </div>
 
+  <div class="tab-panel" id="tab-intelligence-v5">
+    <p class="analytics-subtitle" style="margin-bottom: 16px;">A new, independent Candidate Signal engine: Source and Department each contribute two historical checks (Retention, Performance), and the resulting 4-check pattern maps to exactly one of 7 buckets via a fixed 25-state matrix. This classification is separate from v3/v4's scoring and from the Source/Department insight content, which is reused unchanged as the "action" layer. Spec: ideas/0-highering intelligence explained/newplan-candidate-signal.</p>
+
+    <div class="analytics-card" id="v5EngineQaCard">
+      <h2>Signal Engine QA: all 25 states</h2>
+      <p class="analytics-subtitle">Verifies the ported candidate signal matrix resolves every one of the 25 possible Source x Department combinations (16 complete + 9 incomplete) to the expected bucket, plus threshold boundary checks. This must be all green before any candidate-facing UI is trusted.</p>
+      <div id="v5EngineQaBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v5PriorityCard">
+      <h2>Priority Overview</h2>
+      <p class="analytics-subtitle">Every active candidate, ranked by Candidate Signal severity. Click a candidate to jump to their full card below.</p>
+      <div id="v5PriorityBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v5ShellCard">
+      <h2>Candidate Signals</h2>
+      <p class="analytics-subtitle">Bucket &rarr; meaning &rarr; 4-check historical evidence &rarr; Source/Department action. The bucket badge and evidence grid come only from the signal engine above; the Recruiter Focus / Insight / Recommendation / Questions below come only from v3's existing Source and Department content, unchanged.</p>
+      <div id="v5CandidateBody" class="v3-card-list"></div>
+    </div>
+  </div>
+
   <script src="employeeData.js"></script>
   <script>
     let candidates = [];
@@ -974,7 +1022,8 @@
       intelligence: "What the AI recommends based on both.",
       "intelligence-v2": "Draft restructure: prioritized candidate signals first, benchmarks as reference.",
       "intelligence-v3": "One consistent scoring method: retention x performance, independently for source and department.",
-      "intelligence-v4": "Same scoring as v3, redesigned for recruiters: one signal, then why, then what to do."
+      "intelligence-v4": "Same scoring as v3, redesigned for recruiters: one signal, then why, then what to do.",
+      "intelligence-v5": "A new, independent signal engine: a 25-state Source x Department matrix, separate from v3/v4's scoring."
     };
 
     function showTab(name, btn) {
@@ -1186,6 +1235,7 @@
       renderIntelligenceV2();
       renderIntelligenceV3();
       renderIntelligenceV4();
+      renderIntelligenceV5();
     }
 
     function getTenureYears(dateOfHire, dateOfTermination) {
@@ -3297,6 +3347,327 @@
           <tbody>${rows}</tbody>
         </table>
         <p class="analytics-subtitle" style="margin-top: 10px;">${failCount === 0 ? `All ${cards.length} active candidates covered, no missing v4 vocabulary.` : `${failCount} candidate(s) hit a bucket with no v4 label, fix V4_RECRUITER_LABELS.`}</p>`;
+    }
+
+    // ============================================================================
+    // Hiring Intelligence v5 — an independent Candidate Signal engine. This does
+    // NOT reuse v3BuildCandidateCard / v3SignalPattern / V3_SIGNAL_PATTERNS (v3's
+    // classification). It reuses only pure, stateless data helpers (getSourceStats,
+    // getDepartmentStats, v3ScoreGroup) and, for the action/content layer only,
+    // v3's Source/Department templates (V3_SOURCE_TEMPLATES / V3_DEPT_TEMPLATES).
+    // Classification and content are intentionally independent: changing the
+    // templates below can never change a candidate's bucket.
+    //
+    // Each Source and Department contributes two historical checks, each one of
+    // "high" / "low" / "unavailable":
+    //   retention   >= 80%        -> high, else low, else unavailable if n < 5
+    //   performance >= 3.0 / 4    -> high, else low, else unavailable if n < 5
+    // The resulting 4-check pattern (source retention/performance, department
+    // retention/performance) maps to exactly one of 25 states, each pre-classified
+    // into one of 7 buckets. Ported verbatim from
+    // ideas/0-highering intelligence explained/candidateSignalMatrix.ts.
+    // ============================================================================
+
+    const V5_MIN_SAMPLE = 5;
+    const V5_RETENTION_HIGH = 80;
+    const V5_PERFORMANCE_HIGH = 3;
+
+    const V5_BUCKET_COLORS = {
+      favorable: "green",
+      promising: "blue",
+      "needs-validation": "purple",
+      conflict: "yellow",
+      concern: "orange",
+      flagged: "red",
+      inconclusive: "white"
+    };
+
+    const v5SignalMatrix = [
+      { id: "source-high-high_department-high-high", source: { retention: "high", performance: "high" }, department: { retention: "high", performance: "high" }, checks: 4, bucket: "favorable", meaning: "All four historical measures are strong. High retention and high performance across both Source and Department." },
+      { id: "source-high-high_department-high-low", source: { retention: "high", performance: "high" }, department: { retention: "high", performance: "low" }, checks: 3, bucket: "promising", meaning: "Most historical signals are positive; one area should be validated." },
+      { id: "source-high-high_department-low-high", source: { retention: "high", performance: "high" }, department: { retention: "low", performance: "high" }, checks: 3, bucket: "promising", meaning: "Most historical signals are positive; one area should be validated." },
+      { id: "source-high-low_department-high-high", source: { retention: "high", performance: "low" }, department: { retention: "high", performance: "high" }, checks: 3, bucket: "promising", meaning: "Most historical signals are positive; one area should be validated." },
+      { id: "source-low-high_department-high-high", source: { retention: "low", performance: "high" }, department: { retention: "high", performance: "high" }, checks: 3, bucket: "promising", meaning: "Most historical signals are positive; one area should be validated." },
+      { id: "source-high-low_department-high-low", source: { retention: "high", performance: "low" }, department: { retention: "high", performance: "low" }, checks: 2, bucket: "needs-validation", meaning: "Both Source and Department show high retention but low performance." },
+      { id: "source-low-high_department-low-high", source: { retention: "low", performance: "high" }, department: { retention: "low", performance: "high" }, checks: 2, bucket: "needs-validation", meaning: "Both Source and Department show high performance but low retention." },
+      { id: "source-high-low_department-low-high", source: { retention: "high", performance: "low" }, department: { retention: "low", performance: "high" }, checks: 2, bucket: "conflict", meaning: "Source and Department show mixed signals and different historical patterns across retention and performance." },
+      { id: "source-low-high_department-high-low", source: { retention: "low", performance: "high" }, department: { retention: "high", performance: "low" }, checks: 2, bucket: "conflict", meaning: "Source and Department show mixed signals and different historical patterns across retention and performance." },
+      { id: "source-high-high_department-low-low", source: { retention: "high", performance: "high" }, department: { retention: "low", performance: "low" }, checks: 2, bucket: "conflict", meaning: "Source is historically strong; Department is historically weak." },
+      { id: "source-low-low_department-high-high", source: { retention: "low", performance: "low" }, department: { retention: "high", performance: "high" }, checks: 2, bucket: "conflict", meaning: "Source is historically weak; Department is historically strong." },
+      { id: "source-high-low_department-low-low", source: { retention: "high", performance: "low" }, department: { retention: "low", performance: "low" }, checks: 1, bucket: "concern", meaning: "Most historical signals point to concern; only one measure remains positive." },
+      { id: "source-low-high_department-low-low", source: { retention: "low", performance: "high" }, department: { retention: "low", performance: "low" }, checks: 1, bucket: "concern", meaning: "Most historical signals point to concern; only one measure remains positive." },
+      { id: "source-low-low_department-high-low", source: { retention: "low", performance: "low" }, department: { retention: "high", performance: "low" }, checks: 1, bucket: "concern", meaning: "Most historical signals point to concern; only one measure remains positive." },
+      { id: "source-low-low_department-low-high", source: { retention: "low", performance: "low" }, department: { retention: "low", performance: "high" }, checks: 1, bucket: "concern", meaning: "Most historical signals point to concern; only one measure remains positive." },
+      { id: "source-low-low_department-low-low", source: { retention: "low", performance: "low" }, department: { retention: "low", performance: "low" }, checks: 0, bucket: "flagged", meaning: "All four historical measures are weak. Low retention and low performance across both Source and Department." },
+      { id: "source-unavailable_department-high-high", source: { retention: "unavailable", performance: "unavailable" }, department: { retention: "high", performance: "high" }, checks: 2, bucket: "inconclusive", meaning: "Department is historically strong, but Source is unavailable; insufficient data for candidate signal." },
+      { id: "source-unavailable_department-high-low", source: { retention: "unavailable", performance: "unavailable" }, department: { retention: "high", performance: "low" }, checks: 1, bucket: "inconclusive", meaning: "Department shows mixed signal and Source is unavailable; insufficient data for candidate signal." },
+      { id: "source-unavailable_department-low-high", source: { retention: "unavailable", performance: "unavailable" }, department: { retention: "low", performance: "high" }, checks: 1, bucket: "inconclusive", meaning: "Department shows mixed signal and Source is unavailable; insufficient data for candidate signal." },
+      { id: "source-unavailable_department-low-low", source: { retention: "unavailable", performance: "unavailable" }, department: { retention: "low", performance: "low" }, checks: 0, bucket: "inconclusive", meaning: "Department is historically weak and Source is unavailable; insufficient data for candidate signal." },
+      { id: "source-high-high_department-unavailable", source: { retention: "high", performance: "high" }, department: { retention: "unavailable", performance: "unavailable" }, checks: 2, bucket: "inconclusive", meaning: "Source is historically strong, but Department is unavailable; insufficient data for candidate signal." },
+      { id: "source-high-low_department-unavailable", source: { retention: "high", performance: "low" }, department: { retention: "unavailable", performance: "unavailable" }, checks: 1, bucket: "inconclusive", meaning: "Source shows mixed signal and Department is unavailable; insufficient data for candidate signal." },
+      { id: "source-low-high_department-unavailable", source: { retention: "low", performance: "high" }, department: { retention: "unavailable", performance: "unavailable" }, checks: 1, bucket: "inconclusive", meaning: "Source shows mixed signal and Department is unavailable; insufficient data for candidate signal." },
+      { id: "source-low-low_department-unavailable", source: { retention: "low", performance: "low" }, department: { retention: "unavailable", performance: "unavailable" }, checks: 0, bucket: "inconclusive", meaning: "Source is historically weak and Department is unavailable; insufficient data for candidate signal." },
+      { id: "source-unavailable_department-unavailable", source: { retention: "unavailable", performance: "unavailable" }, department: { retention: "unavailable", performance: "unavailable" }, checks: 0, bucket: "inconclusive", meaning: "Source and Department unavailable; insufficient data for candidate signal." }
+    ];
+
+    // Given a v3ScoreGroup() entry (or null/excluded for n < 5), returns this side's
+    // two historical checks. isComplete mirrors "was this side scoreable at all".
+    function v5HistoricalSignal(entry) {
+      if (!entry) return { retention: "unavailable", performance: "unavailable" };
+      return {
+        retention: entry.retention >= V5_RETENTION_HIGH ? "high" : "low",
+        performance: entry.performance >= V5_PERFORMANCE_HIGH ? "high" : "low"
+      };
+    }
+
+    function getCandidateSignalV5(sourceSignal, departmentSignal) {
+      const rule = v5SignalMatrix.find(r =>
+        r.source.retention === sourceSignal.retention &&
+        r.source.performance === sourceSignal.performance &&
+        r.department.retention === departmentSignal.retention &&
+        r.department.performance === departmentSignal.performance
+      );
+      if (!rule) return null;
+      return {
+        bucket: rule.bucket,
+        color: V5_BUCKET_COLORS[rule.bucket],
+        meaning: rule.meaning,
+        checks: rule.checks,
+        isComplete: sourceSignal.retention !== "unavailable" && departmentSignal.retention !== "unavailable"
+      };
+    }
+
+    // Runs every one of the 25 rows in v5SignalMatrix back through
+    // getCandidateSignalV5 and confirms the bucket/checks round-trip, plus a few
+    // threshold-boundary sanity checks. This is a self-test of the engine itself,
+    // independent of any real candidate data.
+    function v5TestMatrix() {
+      const stateResults = v5SignalMatrix.map(rule => {
+        const actual = getCandidateSignalV5(rule.source, rule.department);
+        const pass = Boolean(actual) && actual.bucket === rule.bucket && actual.checks === rule.checks;
+        return { id: rule.id, expectedBucket: rule.bucket, actualBucket: actual ? actual.bucket : null, expectedChecks: rule.checks, actualChecks: actual ? actual.checks : null, pass };
+      });
+
+      const boundaryResults = [
+        { label: "Retention 80% -> high", pass: v5HistoricalSignal({ retention: 80, performance: 4 }).retention === "high" },
+        { label: "Retention 79.99% -> low", pass: v5HistoricalSignal({ retention: 79.99, performance: 4 }).retention === "low" },
+        { label: "Performance 3.00 -> high", pass: v5HistoricalSignal({ retention: 100, performance: 3.0 }).performance === "high" },
+        { label: "Performance 2.99 -> low", pass: v5HistoricalSignal({ retention: 100, performance: 2.99 }).performance === "low" },
+        { label: "5 hires -> eligible (not unavailable)", pass: v5HistoricalSignal({ retention: 90, performance: 4 }).retention !== "unavailable" },
+        { label: "4 hires -> unavailable", pass: v5HistoricalSignal(null).retention === "unavailable" }
+      ];
+
+      return { stateResults, boundaryResults };
+    }
+
+    function renderV5EngineQa() {
+      const body = document.getElementById("v5EngineQaBody");
+      if (!body) return;
+
+      const { stateResults, boundaryResults } = v5TestMatrix();
+      const completeCount = v5SignalMatrix.filter(r => r.source.retention !== "unavailable" && r.department.retention !== "unavailable").length;
+      const incompleteCount = v5SignalMatrix.length - completeCount;
+      const stateFailCount = stateResults.filter(r => !r.pass).length;
+      const boundaryFailCount = boundaryResults.filter(r => !r.pass).length;
+
+      const stateRows = stateResults.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.expectedBucket} (${r.expectedChecks}/4)</td>
+          <td>${r.actualBucket ? `${r.actualBucket} (${r.actualChecks}/4)` : "<em>no match</em>"}</td>
+          <td>${r.pass ? "✅ PASS" : "❌ FAIL"}</td>
+        </tr>`).join("");
+
+      const boundaryRows = boundaryResults.map(r => `
+        <tr>
+          <td>${r.label}</td>
+          <td>${r.pass ? "✅ PASS" : "❌ FAIL"}</td>
+        </tr>`).join("");
+
+      body.innerHTML = `
+        <p class="analytics-subtitle">${stateFailCount === 0 ? `All 25 states pass (${completeCount} complete + ${incompleteCount} incomplete).` : `${stateFailCount} of 25 states FAILED.`} ${boundaryFailCount === 0 ? "All threshold boundary checks pass." : `${boundaryFailCount} boundary check(s) FAILED.`}</p>
+        <table class="analytics-table">
+          <thead><tr><th>State</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>
+          <tbody>${stateRows}</tbody>
+        </table>
+        <table class="analytics-table" style="margin-top: 14px;">
+          <thead><tr><th>Threshold boundary</th><th>Result</th></tr></thead>
+          <tbody>${boundaryRows}</tbody>
+        </table>`;
+    }
+
+    // Display metadata for the 7 buckets — emoji/label/tone only. Separate from
+    // v5SignalMatrix on purpose: the matrix is the classification contract, this is
+    // presentation, and tone here reuses the CSS tone system (colors added above),
+    // never the plain green/red/white evidence-dot colors used in the 4-check grid.
+    const V5_BUCKET_META = {
+      favorable: { emoji: "🟢", label: "FAVORABLE", tone: "green" },
+      promising: { emoji: "🔵", label: "PROMISING", tone: "blue" },
+      "needs-validation": { emoji: "🟣", label: "NEEDS VALIDATION", tone: "purple" },
+      conflict: { emoji: "🟡", label: "CONFLICT", tone: "yellow" },
+      concern: { emoji: "🟠", label: "CONCERN", tone: "orange" },
+      flagged: { emoji: "🔴", label: "FLAGGED", tone: "red" },
+      inconclusive: { emoji: "⚪", label: "INCONCLUSIVE", tone: "white" }
+    };
+
+    // Severity order for sorting only, same rationale as V3_PATTERN_RANK: a fixed,
+    // explainable position, not a claim that one bucket is worse than another.
+    const V5_PATTERN_RANK = { flagged: 0, concern: 1, conflict: 2, "needs-validation": 3, inconclusive: 4, promising: 5, favorable: 6 };
+
+    // V3's action-archetype badges are written as "🟢 Protect & Prioritize" for a
+    // colored badge context. V5 shows these as plain "Recruiter Focus" text (per
+    // spec: action archetypes must never look like a second status badge), so strip
+    // the leading emoji.
+    function v5StripBadgeEmoji(badge) {
+      return badge.replace(/^[^a-zA-Z0-9]+/, "").trim();
+    }
+
+    // Builds one candidate's V5 model: historical signals -> Candidate Signal (via
+    // the independent engine above), plus the same sourceEntry/deptEntry v3 uses so
+    // the Action layer (V3_SOURCE_TEMPLATES / V3_DEPT_TEMPLATES) can still render
+    // insight/recommendation/questions content. sourceEntry/deptEntry are read-only
+    // here — nothing about them feeds back into the bucket beyond the two-level
+    // high/low/unavailable signal already captured in sourceSignal/deptSignal.
+    function v5BuildCandidateModel(candidate, sourceScored, deptScored) {
+      const sourceEntry = sourceScored.find(e => e.row.source === candidate.source) || null;
+      const deptEntry = deptScored.find(e => e.row.department === candidate.department) || null;
+      const sourceSignal = v5HistoricalSignal(sourceEntry);
+      const deptSignal = v5HistoricalSignal(deptEntry);
+      const signal = getCandidateSignalV5(sourceSignal, deptSignal);
+
+      const days = candidate.lastContact ? Math.floor((new Date() - new Date(candidate.lastContact)) / 86400000) : 0;
+      const status = days >= 15 ? "overdue" : days >= 8 ? "attention" : "ontrack";
+      const statusLabel = status === "overdue" ? `⏱ Overdue, ${days} days` : status === "attention" ? `⏱ Needs Attention, ${days} days` : `✅ On Track, ${days} days`;
+
+      return {
+        candidate, signal, sourceSignal, deptSignal, sourceEntry, deptEntry,
+        status, statusLabel,
+        sortKey: [V5_PATTERN_RANK[signal.bucket], -days]
+      };
+    }
+
+    function v5EvidenceDot(level) {
+      return `<span class="v5-evidence-dot ${level}"></span>`;
+    }
+
+    function v5EvidenceGridHtml(model) {
+      const s = model.sourceSignal, d = model.deptSignal;
+      const countLabel = model.signal.isComplete
+        ? `${model.signal.checks}/4 positive signals`
+        : "Insufficient historical data";
+      return `
+        <div class="v5-evidence-grid">
+          <div></div>
+          <div class="v5-evidence-head">Retention</div>
+          <div class="v5-evidence-head">Performance</div>
+          <div class="v5-evidence-row-label">Source</div>
+          <div>${v5EvidenceDot(s.retention)}</div>
+          <div>${v5EvidenceDot(s.performance)}</div>
+          <div class="v5-evidence-row-label">Department</div>
+          <div>${v5EvidenceDot(d.retention)}</div>
+          <div>${v5EvidenceDot(d.performance)}</div>
+        </div>
+        <div class="v5-evidence-summary">${countLabel}</div>`;
+    }
+
+    // Action layer for one side (Source or Department): reuses V3's templates for
+    // the badge/insight/recommendation/questions content only. If n<5 (no entry),
+    // shows a plain "insufficient data" note instead of a bucket.
+    function v5ActionSectionHtml(kind, name, entry) {
+      if (!entry) {
+        return `
+          <div class="v3-box tone-none">
+            <div class="v3-box-title">${kind}: ${name}</div>
+            <p class="v3-box-text">Insufficient historical data (fewer than 5 historical hires).</p>
+          </div>`;
+      }
+      const templates = kind === "Source" ? V3_SOURCE_TEMPLATES : V3_DEPT_TEMPLATES;
+      const tpl = templates[entry.quadrant]({ source: name, department: name, retention: entry.retention, performance: entry.performance });
+      const evidenceLine = `${entry.retTier === "High" ? "🟢" : "🔴"} ${entry.retTier} Retention: ${v3RetentionPlain(entry.retention)} &middot; ${entry.perfTier === "High" ? "🟢" : "🔴"} ${entry.perfTier} Performance: ${entry.performance.toFixed(2)}/4`;
+      return `
+        <div class="v3-box">
+          <div class="v3-box-title">${kind}: ${name}</div>
+          <p class="v3-box-text">${evidenceLine}</p>
+          <div class="v5-recruiter-focus"><strong>Recruiter Focus:</strong> ${v5StripBadgeEmoji(tpl.badge)}</div>
+          <div class="v3-box-label">Insight</div>
+          <p class="v3-box-text">${tpl.insight}</p>
+          <div class="v3-box-label">Recommendation</div>
+          <ul>${tpl.recs.map(r => `<li>${r}</li>`).join("")}</ul>
+          <div class="v3-box-label">Recruiter Questions</div>
+          <ul>${tpl.questions.map(q => `<li>${q}</li>`).join("")}</ul>
+        </div>`;
+    }
+
+    function v5JumpToCard(cardId) {
+      const el = document.getElementById(cardId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("v3-jump-highlight");
+      setTimeout(() => el.classList.remove("v3-jump-highlight"), 1500);
+    }
+
+    function v5RenderPriorityRow(model, cardId) {
+      const c = model.candidate;
+      const meta = V5_BUCKET_META[model.signal.bucket];
+      const countLabel = model.signal.isComplete ? `${model.signal.checks}/4 positive signals` : "Insufficient historical data";
+      return `
+        <div class="v3-priority-row tone-${meta.tone}" onclick="v5JumpToCard('${cardId}')" style="cursor: pointer;" title="View full card below">
+          <div class="v3-priority-top">
+            <span class="v3-combined-badge tone-${meta.tone}">${meta.emoji} ${meta.label}</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-signal-subtitle">${model.signal.meaning} (${countLabel})</div>
+        </div>`;
+    }
+
+    function v5RenderCandidateCard(model, cardId) {
+      const c = model.candidate;
+      const meta = V5_BUCKET_META[model.signal.bucket];
+      return `
+        <div class="v3-candidate-card" id="${cardId}">
+          <div class="v3-candidate-header">
+            <span class="v3-combined-badge tone-${meta.tone}">${meta.emoji} ${meta.label}</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-signal-subtitle">${model.signal.meaning}</div>
+          <div class="v3-box-label">Historical Signal</div>
+          ${v5EvidenceGridHtml(model)}
+          <div class="v3-boxes">
+            ${v5ActionSectionHtml("Source", c.source, model.sourceEntry)}
+            ${v5ActionSectionHtml("Department", c.department, model.deptEntry)}
+          </div>
+        </div>`;
+    }
+
+    function renderIntelligenceV5() {
+      renderV5EngineQa();
+
+      const priorityBody = document.getElementById("v5PriorityBody");
+      const cardBody = document.getElementById("v5CandidateBody");
+      if (!priorityBody || !cardBody) return;
+
+      const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
+      const sourceScoring = v3ScoreGroup(getSourceStats(), "hired", "retentionRate", "avgPerformance");
+      const deptScoring = v3ScoreGroup(getDepartmentStats(), "headcount", "retentionRate", "avgPerformance");
+
+      const models = activePipeline.map(c => v5BuildCandidateModel(c, sourceScoring.scored, deptScoring.scored));
+      models.sort((a, b) => {
+        for (let i = 0; i < a.sortKey.length; i++) {
+          if (a.sortKey[i] !== b.sortKey[i]) return a.sortKey[i] - b.sortKey[i];
+        }
+        return 0;
+      });
+
+      if (models.length === 0) {
+        priorityBody.innerHTML = `<p class="insight-empty">No active candidates yet, add or load candidates to see signals here.</p>`;
+        cardBody.innerHTML = "";
+        return;
+      }
+
+      priorityBody.innerHTML = models.map((m, i) => v5RenderPriorityRow(m, `v5-card-${i}`)).join("");
+      cardBody.innerHTML = models.map((m, i) => v5RenderCandidateCard(m, `v5-card-${i}`)).join("");
     }
 
     function populateV3Selector() {
