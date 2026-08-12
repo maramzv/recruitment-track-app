@@ -170,6 +170,7 @@
     .v3-candidate-name { font-size: 14px; color: #333; }
     .v3-candidate-name strong { color: #111; }
     .v3-chip { font-size: 11px; padding: 2px 9px; border-radius: 10px; white-space: nowrap; background: #eee; color: #555; }
+    .v3-jump-highlight { outline: 2px solid #4a90e2; outline-offset: 2px; transition: outline-color 1.5s ease; }
     .v3-chip.overdue { background: #ffe3e0; color: #b0362a; }
     .v3-chip.attention { background: #fff3cd; color: #8a6100; }
     .v3-chip.ontrack { background: #e6f7ec; color: #1e7e45; }
@@ -846,12 +847,24 @@
   </div>
 
   <div class="tab-panel" id="tab-intelligence-v4">
-    <p class="analytics-subtitle" style="margin-bottom: 16px;">Same scoring engine as v3 (retention x performance, same 80% retention / 3-of-4 performance floors, same six-bucket Signal Pattern) — this version only changes how it's presented to a recruiter. v3 stays as-is for comparison. Spec: ideas/0-highering intelligence explained/plan.</p>
+    <p class="analytics-subtitle" style="margin-bottom: 16px;">Same scoring engine as v3 (retention x performance, same 80% retention / 3-of-4 performance floors, same six-bucket Signal Pattern), only the presentation to the recruiter changes. v3 stays as-is for comparison. Spec: ideas/0-highering intelligence explained/plan.</p>
+
+    <div class="analytics-card" id="v4PriorityOverviewCard">
+      <h2>Priority Overview (Draft)</h2>
+      <p class="analytics-subtitle">Every active candidate, ranked the same way v3 ranks them, one line each. Click a candidate to jump to their full card below.</p>
+      <div id="v4PriorityOverviewBody"></div>
+    </div>
 
     <div class="analytics-card" id="v4ShellCard">
       <h2>Candidate Signals (Draft)</h2>
-      <p class="analytics-subtitle">Milestone V4.2: same six buckets, same source/department scoring as v3 — reorganized so the signal comes first, then why, then what to do, with raw numbers and interview questions tucked behind "Historical evidence".</p>
+      <p class="analytics-subtitle">Milestone V4.2: same six buckets, same source/department scoring as v3, reorganized so the signal comes first, then why, then what to do, with raw numbers and interview questions tucked behind "Historical evidence".</p>
       <div id="v4CandidateBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v4QaCard">
+      <h2>QA: v4 vs v3 (Milestone V4.6)</h2>
+      <p class="analytics-subtitle">Every active candidate above, checked against v3's bucket, source tone, department tone, and follow-up status. v4 reads the exact same v3BuildCandidateCard result v3 does, so a mismatch here would mean the two tabs are no longer looking at the same underlying data.</p>
+      <div id="v4QaBody"></div>
     </div>
   </div>
 
@@ -3001,7 +3014,35 @@
         </div>`;
     }
 
-    function v4RenderCandidateCard(model) {
+    // Condensed row for Priority Overview: same evidence words as the full card's "Why"
+    // section (Strong/Mixed/Concern/Insufficient), no full sentences, so it stays scannable.
+    function v4RenderPriorityRow(model, cardId) {
+      const c = model.candidate;
+      const displayLabel = V4_RECRUITER_LABELS[model.pattern.label] || model.pattern.label;
+      const sourceWord = model.sourceEntry ? v4EvidenceLabel(model.sourceEntry.tone) : "Insufficient";
+      const deptWord = model.deptEntry ? v4EvidenceLabel(model.deptEntry.tone) : "Insufficient";
+      return `
+        <div class="v3-priority-row tone-${model.pattern.tone}" onclick="v4JumpToCard('${cardId}')" style="cursor: pointer;" title="View full card below">
+          <div class="v3-priority-top">
+            <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${displayLabel}</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-signal-subtitle">${model.pattern.subtitle}</div>
+          <span class="v3-priority-reason"><strong>Source:</strong> ${c.source} &middot; ${sourceWord}</span>
+          <span class="v3-priority-reason"><strong>Department:</strong> ${c.department} &middot; ${deptWord}</span>
+        </div>`;
+    }
+
+    function v4JumpToCard(cardId) {
+      const el = document.getElementById(cardId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("v3-jump-highlight");
+      setTimeout(() => el.classList.remove("v3-jump-highlight"), 1500);
+    }
+
+    function v4RenderCandidateCard(model, cardId) {
       const c = model.candidate;
       const displayLabel = V4_RECRUITER_LABELS[model.pattern.label] || model.pattern.label;
       const focusLines = [
@@ -3014,7 +3055,7 @@
       ].filter(Boolean).join("");
 
       return `
-        <div class="v3-candidate-card">
+        <div class="v3-candidate-card" id="${cardId}">
           <div class="v3-candidate-header">
             <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${displayLabel}</span>
             <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
@@ -3041,8 +3082,9 @@
     // Reuses the same v3ScoreGroup/v3BuildCandidateCard output v3 already computes —
     // no forked scoring, no new candidate sort. Only the card markup differs.
     function renderIntelligenceV4() {
-      const body = document.getElementById("v4CandidateBody");
-      if (!body) return;
+      const priorityBody = document.getElementById("v4PriorityOverviewBody");
+      const cardBody = document.getElementById("v4CandidateBody");
+      if (!priorityBody || !cardBody) return;
 
       const activePipeline = candidates.filter(c => c.stage && c.stage !== "Hired" && c.stage !== "Rejected");
       const sourceStats = getSourceStats();
@@ -3058,9 +3100,66 @@
         return 0;
       });
 
-      body.innerHTML = cards.length > 0
-        ? `<div class="v3-card-list">${cards.map(v4RenderCandidateCard).join("")}</div>`
+      priorityBody.innerHTML = cards.length > 0
+        ? cards.map((m, i) => v4RenderPriorityRow(m, `v4-card-${i}`)).join("")
+        : `<p class="insight-empty">No active candidates yet, add or load candidates to see the priority overview here.</p>`;
+
+      cardBody.innerHTML = cards.length > 0
+        ? `<div class="v3-card-list">${cards.map((m, i) => v4RenderCandidateCard(m, `v4-card-${i}`)).join("")}</div>`
         : `<p class="insight-empty">No active candidates yet, add or load candidates to see signals here.</p>`;
+
+      renderV4Qa(cards);
+    }
+
+    // Milestone V4.6 — QA against v3. Since v4RenderCandidateCard and v4RenderPriorityRow
+    // read the exact same model objects v3's renderer does (both built by the single
+    // v3BuildCandidateCard call above), the bucket/tone/status values can't diverge between
+    // the two tabs by construction. What this table actually verifies: (1) every bucket
+    // v3BuildCandidateCard can produce has a V4_RECRUITER_LABELS entry, so v4 never falls
+    // back to showing a raw internal name by accident, and (2) every tone v3ScoreGroup can
+    // produce (green/yellow/red/missing) has a v4EvidenceLabel word. A FAIL here means the
+    // v4 vocabulary is missing a case, not that the scoring diverged.
+    function renderV4Qa(cards) {
+      const body = document.getElementById("v4QaBody");
+      if (!body) return;
+
+      if (cards.length === 0) {
+        body.innerHTML = `<p class="insight-empty">No active candidates yet, add or load candidates to run the QA check here.</p>`;
+        return;
+      }
+
+      const rows = cards.map(model => {
+        const c = model.candidate;
+        const v3Bucket = model.pattern.label;
+        const v4Label = V4_RECRUITER_LABELS[v3Bucket];
+        const sourceTone = model.sourceEntry ? model.sourceEntry.tone : "none";
+        const deptTone = model.deptEntry ? model.deptEntry.tone : "none";
+        const sourceWord = model.sourceEntry ? v4EvidenceLabel(model.sourceEntry.tone) : v4EvidenceLabel(null);
+        const deptWord = model.deptEntry ? v4EvidenceLabel(model.deptEntry.tone) : v4EvidenceLabel(null);
+        const pass = Boolean(v4Label) && Boolean(sourceWord) && Boolean(deptWord) && Boolean(model.statusLabel);
+
+        return `
+          <tr>
+            <td>${c.name}</td>
+            <td>${v3Bucket}</td>
+            <td>${v4Label || "<em>missing mapping</em>"}</td>
+            <td>${sourceTone} &rarr; ${sourceWord}</td>
+            <td>${deptTone} &rarr; ${deptWord}</td>
+            <td>${model.statusLabel}</td>
+            <td>${pass ? "✅ PASS" : "❌ FAIL"}</td>
+          </tr>`;
+      }).join("");
+
+      const failCount = cards.filter(model => !V4_RECRUITER_LABELS[model.pattern.label]).length;
+
+      body.innerHTML = `
+        <table class="analytics-table">
+          <thead>
+            <tr><th>Candidate</th><th>v3 Bucket</th><th>v4 Label</th><th>Source</th><th>Department</th><th>Follow-up</th><th>Result</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="analytics-subtitle" style="margin-top: 10px;">${failCount === 0 ? `All ${cards.length} active candidates covered, no missing v4 vocabulary.` : `${failCount} candidate(s) hit a bucket with no v4 label, fix V4_RECRUITER_LABELS.`}</p>`;
     }
 
     function populateV3Selector() {
