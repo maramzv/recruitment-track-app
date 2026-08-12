@@ -805,9 +805,13 @@
       <p><strong>Historical signals should determine what you investigate, not what you conclude.</strong></p>
     </details>
 
+    <!-- Testing-only toggle — Candidate Actions duplicates Priority Overview + Deep Dive, kept
+         rendering (never deleted) since it still powers both, just hidden from the page when off -->
+    <button class="dev-tool-btn" onclick="toggleV3CandidateActions()" id="v3CandidateActionsToggleBtn">🧪 Show/Hide Candidate Actions section (testing only)</button>
+
     <div class="analytics-card" id="v3PriorityOverviewCard">
       <h2>Priority Overview (Draft)</h2>
-      <p class="analytics-subtitle">Condensed version of Candidate Actions below: every active candidate ranked by urgency, one line each, with the single strongest reason to look closer. Same scoring, just easier to skim.</p>
+      <p class="analytics-subtitle">Condensed version of Candidate Actions below: every active candidate ranked by urgency, one line each, with the single strongest reason to look closer. Click a candidate to open their full card in Candidate Deep Dive.</p>
       <div id="v3PriorityOverviewBody"></div>
     </div>
 
@@ -2741,8 +2745,9 @@
       const sourceReasonHtml = sourceReason
         ? `<span class="v3-priority-reason"><strong>${sourceReason.kind}:</strong> ${sourceReason.badge} &mdash; ${sourceReason.insight}</span>`
         : `<span class="v3-priority-reason"><strong>Source:</strong> Not enough historical data yet for a source signal.</span>`;
+      const candidateIndex = contextCandidateList.indexOf(c);
       return `
-        <div class="v3-priority-row tone-${model.pattern.tone}">
+        <div class="v3-priority-row tone-${model.pattern.tone}" onclick="v3JumpToDeepDive(${candidateIndex})" style="cursor: pointer;" title="View full card in Candidate Deep Dive">
           <div class="v3-priority-top">
             <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${model.pattern.label}</span>
             <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
@@ -2836,6 +2841,27 @@
       }
 
       return bullets;
+    }
+
+    // Dev-only visibility toggle for Candidate Actions — the section still renders behind
+    // the scenes (v3BuildCandidateCard/v3RenderCandidateCard power Priority Overview and
+    // Deep Dive too), this only hides the card from the page. Not deleted: the plan is to
+    // eventually integrate this same card into the Follow Up modal on Candidate Pipeline.
+    let v3CandidateActionsVisible = true;
+
+    function toggleV3CandidateActions() {
+      v3CandidateActionsVisible = !v3CandidateActionsVisible;
+      document.getElementById("v3CandidateActionsCard").style.display = v3CandidateActionsVisible ? "block" : "none";
+    }
+
+    // Scrolls to and opens a candidate's full card in Candidate Deep Dive — lets a Priority
+    // Overview row act as a drill-down into the same card Candidate Actions used to show
+    // inline for every candidate, without duplicating the card on the page.
+    function v3JumpToDeepDive(candidateIndex) {
+      const select = document.getElementById("v3CandidateSelect");
+      select.value = candidateIndex;
+      renderV3CandidateDetail();
+      document.getElementById("v3DeepDiveCard").scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function renderIntelligenceV3() {
