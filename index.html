@@ -849,6 +849,12 @@
   <div class="tab-panel" id="tab-intelligence-v4">
     <p class="analytics-subtitle" style="margin-bottom: 16px;">Same scoring engine as v3 (retention x performance, same 80% retention / 3-of-4 performance floors, same six-bucket Signal Pattern), only the presentation to the recruiter changes. v3 stays as-is for comparison. Spec: ideas/0-highering intelligence explained/plan.</p>
 
+    <div class="analytics-card" id="v4QuickSkimCard">
+      <h2>Priority Overview: Quick Skim (Draft v2)</h2>
+      <p class="analytics-subtitle">Cold-read test on the draft below found that "Mixed" was doing double duty as both a per-dimension label and something that looked like a second decision system, with no visible link between the evidence and the top-line bucket. This version drops Strong/Mixed/Concern from the quick-skim row and shows the two raw dimensions (retention, performance) plus a synthesis sentence connecting them to the bucket instead. Same scoring, same buckets, same candidates, just under evaluation as a second draft. The row below (Draft) is unchanged.</p>
+      <div id="v4QuickSkimBody"></div>
+    </div>
+
     <div class="analytics-card" id="v4PriorityOverviewCard">
       <h2>Priority Overview (Draft)</h2>
       <p class="analytics-subtitle">Every active candidate, ranked the same way v3 ranks them, one line each. Click a candidate to jump to their full card below.</p>
@@ -859,6 +865,18 @@
       <h2>Candidate Signals (Draft)</h2>
       <p class="analytics-subtitle">Milestone V4.2: same six buckets, same source/department scoring as v3, reorganized so the signal comes first, then why, then what to do, with raw numbers and interview questions tucked behind "Historical evidence".</p>
       <div id="v4CandidateBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v4SourceCard">
+      <h2>Source Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Kept detailed on purpose: this is the evidence view, not the triage view. Same ranking table and concentration callouts as v3's Source Insights, same scoring, same 5-hire minimum.</p>
+      <div id="v4SourceBody"></div>
+    </div>
+
+    <div class="analytics-card" id="v4DeptCard">
+      <h2>Department Insights &amp; Recommendations</h2>
+      <p class="analytics-subtitle">Same as Source Insights: full detail preserved here, kept identical to v3's Department Insights.</p>
+      <div id="v4DeptBody"></div>
     </div>
 
     <div class="analytics-card" id="v4QaCard">
@@ -3016,6 +3034,86 @@
 
     // Condensed row for Priority Overview: same evidence words as the full card's "Why"
     // section (Strong/Mixed/Concern/Insufficient), no full sentences, so it stays scannable.
+    // ============================================================================
+    // Priority Overview: Quick Skim (Draft v2) — a second, additive draft of the
+    // priority row only. Built after a cold-read test on the Draft-v1 row found that
+    // "Mixed" was doing double duty as a per-dimension label and something that read
+    // like a second decision system, with no visible link from the evidence to the
+    // top-line bucket. This draft drops Strong/Mixed/Concern from the row entirely and
+    // shows the two raw dimensions (retention, performance) plus a synthesis sentence,
+    // per ideas/0-highering intelligence explained/plan (11:46 PM update). Reads the
+    // same v3BuildCandidateCard model as every other v4 view — no forked scoring, no
+    // new bucket. Draft v1 (v4RenderPriorityRow) is untouched below.
+    // ============================================================================
+
+    function v4DimensionSummary(entry) {
+      if (entry.retTier === "High" && entry.perfTier === "High") return "strong retention and performance";
+      if (entry.retTier === "High" && entry.perfTier === "Low") return "strong retention but weaker performance";
+      if (entry.retTier === "Low" && entry.perfTier === "High") return "strong performance but weaker retention";
+      return "weaker retention and performance";
+    }
+
+    // One controlled sentence bridging the Source/Department evidence to the candidate-
+    // level bucket, so the recruiter never has to reverse-engineer how "Mixed" + "Mixed"
+    // becomes "Needs Validation" (or any other combination) themselves.
+    function v4SynthesisSentence(sourceName, sourceEntry, deptName, deptEntry) {
+      if (!sourceEntry && !deptEntry) return "There isn't enough historical data on source or department yet to form a signal.";
+      if (sourceEntry && !deptEntry) return `${sourceName} provides a ${v4DimensionSummary(sourceEntry)} signal; there isn't enough department history to assess ${deptName}.`;
+      if (!sourceEntry && deptEntry) return `${deptName} provides a ${v4DimensionSummary(deptEntry)} signal; there isn't enough source history to assess ${sourceName}.`;
+
+      const sameQuadrant = sourceEntry.retTier === deptEntry.retTier && sourceEntry.perfTier === deptEntry.perfTier;
+      if (sameQuadrant) {
+        if (sourceEntry.retTier === "High" && sourceEntry.perfTier === "High") return "Both the source and department show strong historical retention and performance.";
+        if (sourceEntry.retTier === "Low" && sourceEntry.perfTier === "Low") return "Both the source and department show weaker historical retention and performance.";
+        if (sourceEntry.retTier === "High" && sourceEntry.perfTier === "Low") return "Both signals show healthy retention but weaker performance.";
+        return "Both signals show strong performance but weaker retention.";
+      }
+      return `${sourceName} shows ${v4DimensionSummary(sourceEntry)}, while ${deptName} shows ${v4DimensionSummary(deptEntry)}.`;
+    }
+
+    // Recruiter focus reuses the same per-quadrant badge text the rest of v4 already
+    // pulls from V3_SOURCE_TEMPLATES/V3_DEPT_TEMPLATES, deduped when source and
+    // department land on the same recommendation.
+    function v4QuickSkimFocus(sourceName, sourceEntry, deptName, deptEntry) {
+      const parts = [];
+      if (sourceEntry) {
+        const tpl = V3_SOURCE_TEMPLATES[sourceEntry.quadrant]({ source: sourceName, department: sourceName, retention: sourceEntry.retention, performance: sourceEntry.performance });
+        parts.push(tpl.badge.replace(/^\S+\s/, ""));
+      }
+      if (deptEntry) {
+        const tpl = V3_DEPT_TEMPLATES[deptEntry.quadrant]({ source: deptName, department: deptName, retention: deptEntry.retention, performance: deptEntry.performance });
+        parts.push(tpl.badge.replace(/^\S+\s/, ""));
+      }
+      const unique = [...new Set(parts)];
+      return unique.length > 0 ? unique.join(" + ") : "No historical evidence yet to guide next steps.";
+    }
+
+    function v4QuickSkimDimensionLine(kind, name, entry) {
+      if (!entry) return `<span class="v3-priority-reason"><strong>${kind}:</strong> ${name} &middot; not enough historical hires to assess (minimum 5)</span>`;
+      const retStatus = entry.retTier === "High" ? "Strong" : "Below benchmark";
+      const perfStatus = entry.perfTier === "High" ? "Strong" : "Below benchmark";
+      return `<span class="v3-priority-reason"><strong>${kind}:</strong> ${name} &middot; Retention ${entry.retention.toFixed(0)}% (${retStatus}) &middot; Performance ${entry.performance.toFixed(2)}/4 (${perfStatus})</span>`;
+    }
+
+    function v4RenderQuickSkimRow(model, cardId) {
+      const c = model.candidate;
+      const displayLabel = V4_RECRUITER_LABELS[model.pattern.label] || model.pattern.label;
+      const synthesis = v4SynthesisSentence(c.source, model.sourceEntry, c.department, model.deptEntry);
+      const focus = v4QuickSkimFocus(c.source, model.sourceEntry, c.department, model.deptEntry);
+      return `
+        <div class="v3-priority-row tone-${model.pattern.tone}" onclick="v4JumpToCard('${cardId}')" style="cursor: pointer;" title="View full card below">
+          <div class="v3-priority-top">
+            <span class="v3-combined-badge tone-${model.pattern.tone}">${model.pattern.emoji} ${displayLabel}</span>
+            <span class="v3-candidate-name"><strong>${c.name}</strong> &middot; ${c.role || "Role not set"} &middot; ${c.department} &middot; <em>${c.stage}</em></span>
+            <span class="v3-chip ${model.status}">${model.statusLabel}</span>
+          </div>
+          <div class="v3-signal-subtitle">${synthesis}</div>
+          ${v4QuickSkimDimensionLine("Source", c.source, model.sourceEntry)}
+          ${v4QuickSkimDimensionLine("Department", c.department, model.deptEntry)}
+          <span class="v3-priority-reason"><strong>Recruiter focus:</strong> ${focus}</span>
+        </div>`;
+    }
+
     function v4RenderPriorityRow(model, cardId) {
       const c = model.candidate;
       const displayLabel = V4_RECRUITER_LABELS[model.pattern.label] || model.pattern.label;
@@ -3082,6 +3180,7 @@
     // Reuses the same v3ScoreGroup/v3BuildCandidateCard output v3 already computes —
     // no forked scoring, no new candidate sort. Only the card markup differs.
     function renderIntelligenceV4() {
+      const quickSkimBody = document.getElementById("v4QuickSkimBody");
       const priorityBody = document.getElementById("v4PriorityOverviewBody");
       const cardBody = document.getElementById("v4CandidateBody");
       if (!priorityBody || !cardBody) return;
@@ -3100,6 +3199,12 @@
         return 0;
       });
 
+      if (quickSkimBody) {
+        quickSkimBody.innerHTML = cards.length > 0
+          ? cards.map((m, i) => v4RenderQuickSkimRow(m, `v4-card-${i}`)).join("")
+          : `<p class="insight-empty">No active candidates yet, add or load candidates to see the quick skim here.</p>`;
+      }
+
       priorityBody.innerHTML = cards.length > 0
         ? cards.map((m, i) => v4RenderPriorityRow(m, `v4-card-${i}`)).join("")
         : `<p class="insight-empty">No active candidates yet, add or load candidates to see the priority overview here.</p>`;
@@ -3107,6 +3212,38 @@
       cardBody.innerHTML = cards.length > 0
         ? `<div class="v3-card-list">${cards.map((m, i) => v4RenderCandidateCard(m, `v4-card-${i}`)).join("")}</div>`
         : `<p class="insight-empty">No active candidates yet, add or load candidates to see signals here.</p>`;
+
+      // Source/Department Insights: intentionally NOT redesigned, per plan these stay
+      // evidence-oriented. Reuses v3's own ranking table + concentration callouts verbatim.
+      const sourceBody = document.getElementById("v4SourceBody");
+      if (sourceBody) {
+        const sourcePipelineCounts = countBy(activePipeline, "source");
+        const sourceCallouts = v3ConcentrationCallouts(sourceScoring.scored, sourcePipelineCounts, activePipeline.length, "Source");
+        sourceBody.innerHTML = `
+          <div class="insight-block">
+            ${v3RenderRankingTable(sourceScoring.scored, sourceScoring.excluded, "Source")}
+          </div>
+          <div class="insight-block" style="margin-top: 14px;">
+            ${sourceCallouts.length > 0
+              ? sourceCallouts.map(b => `<div class="insight-recommendation">${b}</div>`).join("")
+              : `<p class="insight-empty">Current pipeline mix roughly matches historical source strength, nothing to flag.</p>`}
+          </div>`;
+      }
+
+      const deptBody = document.getElementById("v4DeptBody");
+      if (deptBody) {
+        const deptPipelineCounts = countBy(activePipeline, "department");
+        const deptCallouts = v3ConcentrationCallouts(deptScoring.scored, deptPipelineCounts, activePipeline.length, "Department");
+        deptBody.innerHTML = `
+          <div class="insight-block">
+            ${v3RenderRankingTable(deptScoring.scored, deptScoring.excluded, "Department")}
+          </div>
+          <div class="insight-block" style="margin-top: 14px;">
+            ${deptCallouts.length > 0
+              ? deptCallouts.map(b => `<div class="insight-recommendation">${b}</div>`).join("")
+              : `<p class="insight-empty">Current pipeline mix roughly matches historical department strength, nothing to flag.</p>`}
+          </div>`;
+      }
 
       renderV4Qa(cards);
     }
